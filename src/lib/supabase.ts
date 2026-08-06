@@ -13,10 +13,22 @@ if (!supabaseUrl || !supabasePublishableKey) {
   );
 }
 
+// Durante a exportação estática, o Expo renderiza as rotas em Node, onde não
+// existe `window`. O AsyncStorage web só pode ser usado depois que o navegador
+// assume; no servidor uma sessão persistida não existe mesmo.
+const storage =
+  Platform.OS === 'web' && typeof window === 'undefined'
+    ? {
+        getItem: async (_key: string) => null,
+        setItem: async (_key: string, _value: string) => {},
+        removeItem: async (_key: string) => {},
+      }
+    : AsyncStorage;
+
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
     // AsyncStorage no nativo; no web o pacote usa localStorage por baixo.
-    storage: AsyncStorage,
+    storage,
     autoRefreshToken: true,
     persistSession: true,
     // Só o web tem uma URL de callback para ler a sessão depois de um OAuth.

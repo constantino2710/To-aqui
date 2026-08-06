@@ -7,7 +7,7 @@ import { PrimaryButton } from '@/components/primary-button';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroAuth } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
@@ -89,7 +89,7 @@ export default function LoginScreen() {
               </View>
 
               {erro && (
-                <ThemedText type="small" style={styles.erro}>
+                <ThemedText type="small" themeColor="danger">
                   {erro}
                 </ThemedText>
               )}
@@ -142,11 +142,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   aviso: {
-    borderRadius: 12,
+    borderRadius: Radii.medium,
     padding: Spacing.three,
-  },
-  erro: {
-    color: '#e5484d',
   },
   rodape: {
     flexDirection: 'row',
