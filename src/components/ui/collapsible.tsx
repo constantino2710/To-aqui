@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolView } from 'expo-symbols';
 import { PropsWithChildren, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
@@ -19,11 +20,19 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
         onPress={() => setIsOpen((value) => !value)}>
         <ThemedView type="backgroundElement" style={styles.button}>
           <SymbolView
-            name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+            name="chevron.right"
             size={14}
             weight="bold"
             tintColor={theme.text}
             style={{ transform: [{ rotate: isOpen ? '-90deg' : '90deg' }] }}
+            fallback={
+              <MaterialIcons
+                name="chevron-right"
+                size={14}
+                color={theme.text}
+                style={{ transform: [{ rotate: isOpen ? '-90deg' : '90deg' }] }}
+              />
+            }
           />
         </ThemedView>
 

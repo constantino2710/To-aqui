@@ -1,18 +1,43 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { AuthProvider, useAuth } from '@/lib/auth';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
+function RootNavigator() {
+  const { session, isLoading } = useAuth();
+
+  // Enquanto a sessão salva no AsyncStorage não terminou de carregar não dá para
+  // saber para qual lado ir. Renderizar o Stack agora faria a tela de login
+  // piscar por um instante para quem já está logado.
+  if (isLoading) return null;
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+      <AuthProvider>
+        <AnimatedSplashOverlay />
+        <RootNavigator />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
