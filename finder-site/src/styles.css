@@ -1,0 +1,37 @@
+:root {
+  --color-text: #211f2d;
+  --color-text-secondary: #5f5b6b;
+  --color-background: #f7f4ff;
+  --color-surface: #ffffff;
+  --color-brand: #6732ee;
+  --color-brand-soft: #eee8ff;
+  --color-success: #31b978;
+  --color-danger: #e5484d;
+  --color-border: #eae6f2;
+  --color-shadow: rgba(54, 28, 117, .14);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-text);
+  background: var(--color-background);
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button { font: inherit; }
+.page { width: min(100% - 32px, 560px); margin: 0 auto; padding: 56px 0; display: grid; gap: 24px; }
+.hero { display: grid; gap: 8px; }
+.eyebrow { color: var(--color-brand); font-size: 12px; font-weight: 800; letter-spacing: .14em; }
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(30px, 8vw, 44px); line-height: 1.08; letter-spacing: -.035em; }
+.hero p, .message, .privacy { color: var(--color-text-secondary); line-height: 1.55; }
+.card { padding: 24px; border: 1px solid var(--color-border); border-radius: 24px; background: var(--color-surface); box-shadow: 0 18px 50px var(--color-shadow); display: grid; gap: 24px; }
+.location-icon { width: 72px; height: 72px; border-radius: 24px; display: grid; place-items: center; color: var(--color-brand); background: var(--color-brand-soft); font-size: 40px; font-weight: 800; }
+.location-icon.done { color: var(--color-success); }
+h2 { margin-bottom: 8px; font-size: 22px; }
+.primary, .secondary { width: 100%; min-height: 52px; padding: 12px 18px; border-radius: 14px; border: 0; font-weight: 750; cursor: pointer; }
+.primary { color: var(--color-surface); background: var(--color-brand); box-shadow: 0 8px 20px var(--color-shadow); }
+.secondary { color: var(--color-brand); background: var(--color-brand-soft); }
+.secondary.danger { color: var(--color-danger); }
+button:disabled { cursor: wait; opacity: .6; }
+.privacy { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; padding: 0 8px; }
+.privacy span { color: var(--color-brand); }
+@media (max-width: 480px) { .page { padding: 32px 0; } .card { padding: 20px; } }
