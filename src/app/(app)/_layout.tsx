@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
+import { useLocationAlerts } from '@/hooks/use-location-alerts';
 import { useTheme } from '@/hooks/use-theme';
 
 const ABAS = [
@@ -16,6 +17,7 @@ const ABAS = [
 ] as const;
 
 export default function AppLayout() {
+  useLocationAlerts();
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <BarraInferior {...props} />}>
       <Tabs.Screen name="comunidade" options={{ title: 'Comunidade' }} />
