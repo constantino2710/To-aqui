@@ -1,9 +1,8 @@
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
-
-const BRAND = '#208AEF';
+import { Radii, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export type PrimaryButtonProps = {
   label: string;
@@ -13,6 +12,7 @@ export type PrimaryButtonProps = {
 };
 
 export function PrimaryButton({ label, onPress, loading = false, disabled = false }: PrimaryButtonProps) {
+  const theme = useTheme();
   const inativo = disabled || loading;
 
   return (
@@ -22,13 +22,14 @@ export function PrimaryButton({ label, onPress, loading = false, disabled = fals
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        { backgroundColor: theme.brand, shadowColor: theme.shadow },
         inativo && styles.inativo,
         pressed && !inativo && styles.pressionado,
       ]}>
       {loading ? (
-        <ActivityIndicator color="#ffffff" />
+        <ActivityIndicator color={theme.onBrand} />
       ) : (
-        <ThemedText type="smallBold" style={styles.label}>
+        <ThemedText type="smallBold" style={[styles.label, { color: theme.onBrand }]}>
           {label}
         </ThemedText>
       )}
@@ -38,12 +39,15 @@ export function PrimaryButton({ label, onPress, loading = false, disabled = fals
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: BRAND,
-    borderRadius: 12,
+    borderRadius: Radii.medium,
     paddingVertical: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   inativo: {
     opacity: 0.5,
@@ -52,7 +56,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   label: {
-    color: '#ffffff',
     fontSize: 16,
   },
 });
