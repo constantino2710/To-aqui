@@ -30,6 +30,16 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Ferramentas locais (config de máquina, não interessa a quem clona)
+.claude/
+.idea/
+*.log
+
 # local env files
 .env
 .env*.local
