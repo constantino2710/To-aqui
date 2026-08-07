@@ -558,13 +558,16 @@ export default function ConfigurarFamiliaScreen() {
                       Uso ilimitado
                     </ThemedText>
                   </View>
-                  <SecondaryButton
-                    label="Configurar"
-                    tom="marca"
-                    compacto
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Configurar QR Code de ${qr.dependent_name}`}
                     onPress={() => abrirConfiguracaoQr(qr)}
-                  />
-                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                    style={({ pressed }) => [
+                      styles.botaoConfigurarQr,
+                      { backgroundColor: theme.backgroundSelected, opacity: pressed ? 0.72 : 1 },
+                    ]}>
+                    <Ionicons name="pencil-outline" size={20} color={theme.brand} />
+                  </Pressable>
                 </View>
               </Card>
             ))
@@ -790,6 +793,7 @@ const styles = StyleSheet.create({
   qrLinha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   qrIcone: { width: 52, height: 52, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
   qrTextos: { flex: 1, gap: Spacing.half },
+  botaoConfigurarQr: { width: 44, height: 44, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
   alertaCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   alertaIcone: { width: 48, height: 48, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
   acoesLocalizacao: { gap: Spacing.two },
