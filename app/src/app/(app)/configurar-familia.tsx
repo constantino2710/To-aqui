@@ -109,6 +109,13 @@ export default function ConfigurarFamiliaScreen() {
       ]);
       setCarregando(false);
 
+      // Os QR Codes continuam sendo úteis mesmo se uma atualização nova do
+      // rastreamento ainda não foi aplicada no banco. Preencher esses dados
+      // antes de tratar o erro evita que a tela pareça vazia nesse intervalo.
+      setQrs((qrCodes.data ?? []) as QrCadastrado[]);
+      if (!sessoesAtivas.error) setSessoes((sessoesAtivas.data ?? []) as SessaoRastreamento[]);
+      if (!localizacoes.error) setPings((localizacoes.data ?? []) as PingLocalizacao[]);
+
       const error = grupos.error ?? pessoas.error ?? convidaveis.error ?? qrCodes.error ?? sessoesAtivas.error ?? localizacoes.error;
       if (error) {
         Alert.alert('Não foi possível carregar', traduzErroBanco(error.message));
@@ -129,9 +136,6 @@ export default function ConfigurarFamiliaScreen() {
       setPapel(familia.meu_papel);
       setMembros((pessoas.data ?? []) as Pessoa[]);
       setAmigos((convidaveis.data ?? []) as Pessoa[]);
-      setQrs((qrCodes.data ?? []) as QrCadastrado[]);
-      setSessoes((sessoesAtivas.data ?? []) as SessaoRastreamento[]);
-      setPings((localizacoes.data ?? []) as PingLocalizacao[]);
       return;
     }
 
