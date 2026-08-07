@@ -81,6 +81,9 @@ export default function ConfigurarFamiliaScreen() {
   const [excluindoQr, setExcluindoQr] = useState<string | null>(null);
   const [compartilhandoLocalizacao, setCompartilhandoLocalizacao] = useState<string | null>(null);
   const [qrAberto, setQrAberto] = useState<QrCadastrado | null>(null);
+  const [qrConfigurando, setQrConfigurando] = useState<QrCadastrado | null>(null);
+  const [nomeQrEditando, setNomeQrEditando] = useState('');
+  const [salvandoEdicaoQr, setSalvandoEdicaoQr] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -298,6 +301,34 @@ export default function ConfigurarFamiliaScreen() {
     setQrs((atuais) =>
       atuais.map((item) => item.id === qr.id ? { ...item, is_active: !item.is_active } : item)
     );
+    setQrConfigurando((aberto) => aberto?.id === qr.id ? { ...aberto, is_active: !aberto.is_active } : aberto);
+  }
+
+  function abrirConfiguracaoQr(qr: QrCadastrado) {
+    setQrAberto(null);
+    setNomeQrEditando(qr.dependent_name);
+    setQrConfigurando(qr);
+  }
+
+  async function salvarEdicaoQr() {
+    if (!qrConfigurando) return;
+    const nomeLimpo = nomeQrEditando.trim();
+    if (!nomeLimpo) {
+      Alert.alert('Dê um nome ao QR Code', 'Use um nome para identificá-lo na família.');
+      return;
+    }
+    setSalvandoEdicaoQr(true);
+    const { error } = await supabase
+      .from('qr_codes')
+      .update({ dependent_name: nomeLimpo })
+      .eq('id', qrConfigurando.id);
+    setSalvandoEdicaoQr(false);
+    if (error) {
+      Alert.alert('Não foi possível editar', traduzErroBanco(error.message));
+      return;
+    }
+    setQrs((atuais) => atuais.map((item) => item.id === qrConfigurando.id ? { ...item, dependent_name: nomeLimpo } : item));
+    setQrConfigurando(null);
   }
 
   function confirmarExclusaoQr(qr: QrCadastrado) {
@@ -320,6 +351,7 @@ export default function ConfigurarFamiliaScreen() {
       return;
     }
     setQrAberto((aberto) => aberto?.id === qr.id ? null : aberto);
+    setQrConfigurando((aberto) => aberto?.id === qr.id ? null : aberto);
     setQrs((atuais) => atuais.filter((item) => item.id !== qr.id));
     setSessoes((atuais) => atuais.filter((item) => item.qr_code_id !== qr.id));
   }
@@ -527,21 +559,11 @@ export default function ConfigurarFamiliaScreen() {
                     </ThemedText>
                   </View>
                   <SecondaryButton
-                    label={qr.is_active ? 'Desativar' : 'Ativar'}
-                    tom={qr.is_active ? 'perigo' : 'marca'}
+                    label="Configurar"
+                    tom="marca"
                     compacto
-                    loading={alterandoQr === qr.id}
-                    onPress={() => alternarQr(qr)}
+                    onPress={() => abrirConfiguracaoQr(qr)}
                   />
-                  {podeEditar && (
-                    <SecondaryButton
-                      label="Excluir"
-                      tom="perigo"
-                      compacto
-                      loading={excluindoQr === qr.id}
-                      onPress={() => confirmarExclusaoQr(qr)}
-                    />
-                  )}
                   <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
                 </View>
               </Card>
@@ -603,6 +625,53 @@ export default function ConfigurarFamiliaScreen() {
               />
             )}
             <PrimaryButton label="Fechar" onPress={() => setQrAberto(null)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!qrConfigurando}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setQrConfigurando(null)}>
+        <View style={[styles.modalFundo, { backgroundColor: theme.overlay }]}>
+          <View style={[styles.modalConteudo, { backgroundColor: theme.backgroundElement }]}>
+            <View style={styles.modalCabecalho}>
+              <View style={styles.modalTitulo}>
+                <ThemedText type="subtitle">Configurar QR Code</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Altere as opções deste QR Code.
+                </ThemedText>
+              </View>
+              <BotaoIcone icone="close" label="Fechar" onPress={() => setQrConfigurando(null)} />
+            </View>
+
+            <TextField
+              label="Nome de identificação"
+              value={nomeQrEditando}
+              onChangeText={setNomeQrEditando}
+              maxLength={60}
+              returnKeyType="done"
+              onSubmitEditing={() => void salvarEdicaoQr()}
+            />
+            <PrimaryButton label="Salvar alterações" onPress={() => void salvarEdicaoQr()} loading={salvandoEdicaoQr} />
+            {qrConfigurando && (
+              <SecondaryButton
+                label={qrConfigurando.is_active ? 'Desativar QR Code' : 'Ativar QR Code'}
+                tom={qrConfigurando.is_active ? 'perigo' : 'marca'}
+                loading={alterandoQr === qrConfigurando.id}
+                onPress={() => void alternarQr(qrConfigurando)}
+              />
+            )}
+            {qrConfigurando && papel === 'chefe' && (
+              <SecondaryButton
+                label="Excluir QR Code"
+                tom="perigo"
+                loading={excluindoQr === qrConfigurando.id}
+                onPress={() => confirmarExclusaoQr(qrConfigurando)}
+              />
+            )}
           </View>
         </View>
       </Modal>
