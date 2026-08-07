@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "app",
+    "name": "To Aqui",
     "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,8 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ]
+      ],
+      "package": "com.consjck3.app"
     },
     "web": {
       "output": "static",
