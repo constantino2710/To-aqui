@@ -78,6 +78,7 @@ export default function ConfigurarFamiliaScreen() {
   const [convidando, setConvidando] = useState<string | null>(null);
   const [cadastrandoQr, setCadastrandoQr] = useState(false);
   const [alterandoQr, setAlterandoQr] = useState<string | null>(null);
+  const [excluindoQr, setExcluindoQr] = useState<string | null>(null);
   const [compartilhandoLocalizacao, setCompartilhandoLocalizacao] = useState<string | null>(null);
   const [qrAberto, setQrAberto] = useState<QrCadastrado | null>(null);
 
@@ -299,6 +300,30 @@ export default function ConfigurarFamiliaScreen() {
     );
   }
 
+  function confirmarExclusaoQr(qr: QrCadastrado) {
+    Alert.alert(
+      'Excluir QR Code?',
+      `O QR Code de ${qr.dependent_name} e o histórico de atendimentos vinculados a ele serão apagados. Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => void excluirQr(qr) },
+      ]
+    );
+  }
+
+  async function excluirQr(qr: QrCadastrado) {
+    setExcluindoQr(qr.id);
+    const { error } = await supabase.from('qr_codes').delete().eq('id', qr.id);
+    setExcluindoQr(null);
+    if (error) {
+      Alert.alert('Não foi possível excluir', traduzErroBanco(error.message));
+      return;
+    }
+    setQrAberto((aberto) => aberto?.id === qr.id ? null : aberto);
+    setQrs((atuais) => atuais.filter((item) => item.id !== qr.id));
+    setSessoes((atuais) => atuais.filter((item) => item.qr_code_id !== qr.id));
+  }
+
   async function resolverSessao(sessaoId: string) {
     const { error } = await supabase.rpc('resolve_tracking_session', { p_session_id: sessaoId });
     if (error) {
@@ -497,6 +522,9 @@ export default function ConfigurarFamiliaScreen() {
                     <ThemedText type="small" themeColor={qr.is_active ? 'success' : 'danger'}>
                       {qr.is_active ? 'Ativo' : 'Desativado'}
                     </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Uso ilimitado
+                    </ThemedText>
                   </View>
                   <SecondaryButton
                     label={qr.is_active ? 'Desativar' : 'Ativar'}
@@ -505,6 +533,15 @@ export default function ConfigurarFamiliaScreen() {
                     loading={alterandoQr === qr.id}
                     onPress={() => alternarQr(qr)}
                   />
+                  {podeEditar && (
+                    <SecondaryButton
+                      label="Excluir"
+                      tom="perigo"
+                      compacto
+                      loading={excluindoQr === qr.id}
+                      onPress={() => confirmarExclusaoQr(qr)}
+                    />
+                  )}
                   <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
                 </View>
               </Card>
@@ -543,6 +580,12 @@ export default function ConfigurarFamiliaScreen() {
                 />
               )}
             </View>
+
+            {qrAberto && (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado} selectable>
+                {finderUrl(qrAberto.token)}
+              </ThemedText>
+            )}
 
             <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado}>
               Ao escanear, abre o site público para autorizar o envio da localização.
