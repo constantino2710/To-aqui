@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Location from 'expo-location';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -39,6 +40,9 @@ type SessaoRastreamento = {
   status: 'awaiting_consent' | 'active' | 'ended';
   started_at: string;
   last_ping_at: string | null;
+  responsible_lat: number | null;
+  responsible_lng: number | null;
+  responsible_recorded_at: string | null;
 };
 type PingLocalizacao = {
   id: number;
@@ -74,6 +78,7 @@ export default function ConfigurarFamiliaScreen() {
   const [convidando, setConvidando] = useState<string | null>(null);
   const [cadastrandoQr, setCadastrandoQr] = useState(false);
   const [alterandoQr, setAlterandoQr] = useState<string | null>(null);
+  const [compartilhandoLocalizacao, setCompartilhandoLocalizacao] = useState<string | null>(null);
   const [qrAberto, setQrAberto] = useState<QrCadastrado | null>(null);
 
   const carregar = useCallback(async () => {
@@ -91,7 +96,7 @@ export default function ConfigurarFamiliaScreen() {
           .order('created_at', { ascending: false }),
         supabase
           .from('tracking_sessions')
-          .select('id, qr_code_id, status, started_at, last_ping_at')
+          .select('id, qr_code_id, status, started_at, last_ping_at, responsible_lat, responsible_lng, responsible_recorded_at')
           .eq('group_id', groupId)
           .eq('status', 'active')
           .order('started_at', { ascending: false }),
@@ -291,6 +296,32 @@ export default function ConfigurarFamiliaScreen() {
     Alert.alert('Atendimento encerrado', 'O celular que compartilhou a localização receberá o aviso.');
   }
 
+  async function compartilharLocalizacao(sessaoId: string) {
+    setCompartilhandoLocalizacao(sessaoId);
+    const permissao = await Location.requestForegroundPermissionsAsync();
+    if (!permissao.granted) {
+      setCompartilhandoLocalizacao(null);
+      Alert.alert('Localização não permitida', 'Autorize a localização para que a pessoa que encontrou o QR possa ver onde você está.');
+      return;
+    }
+
+    const posicao = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    const { error } = await supabase.rpc('record_responsible_location', {
+      p_session_id: sessaoId,
+      p_lat: posicao.coords.latitude,
+      p_lng: posicao.coords.longitude,
+      p_accuracy_m: posicao.coords.accuracy,
+      p_recorded_at: new Date(posicao.timestamp).toISOString(),
+    });
+    setCompartilhandoLocalizacao(null);
+    if (error) {
+      Alert.alert('Não foi possível compartilhar', traduzErroBanco(error.message));
+      return;
+    }
+    await carregar();
+    Alert.alert('Localização compartilhada', 'A pessoa que escaneou o QR agora vê sua posição no mapa desta sessão.');
+  }
+
   const podeEditar = !groupId || papel === 'chefe';
 
   function cancelarEdicaoNome() {
@@ -377,9 +408,16 @@ export default function ConfigurarFamiliaScreen() {
                       {ping.accuracy_m ? ` · precisão aproximada de ${Math.round(ping.accuracy_m)} m` : ''}
                     </ThemedText>
                     <View style={styles.acoesLocalizacao}>
+                      <SecondaryButton label="Compartilhar minha localização" tom="marca" onPress={() => void compartilharLocalizacao(sessao.id)} loading={compartilhandoLocalizacao === sessao.id} />
                       <SecondaryButton label="Abrir mapa" tom="marca" onPress={() => void Linking.openURL(openStreetMapUrl(ping.lat, ping.lng))} />
                       <PrimaryButton label="Já encontramos" onPress={() => void resolverSessao(sessao.id)} />
                     </View>
+                    {sessao.responsible_lat != null && sessao.responsible_lng != null && (
+                      <>
+                        <ThemedText type="smallBold">Sua localização compartilhada</ThemedText>
+                        <LocationMap lat={sessao.responsible_lat} lng={sessao.responsible_lng} />
+                      </>
+                    )}
                   </>
                 ) : (
                   <ThemedText type="small" themeColor="textSecondary">

@@ -1,6 +1,6 @@
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Vibration } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +31,9 @@ export function useLocationAlerts() {
             const ping = payload.new as NovoPing;
             if (sessoesAvisadas.current.has(ping.session_id)) return;
             sessoesAvisadas.current.add(ping.session_id);
+            // Três pulsos longos: suficiente para chamar atenção sem manter a
+            // vibração presa caso o usuário já esteja olhando para a tela.
+            Vibration.vibrate([0, 700, 250, 700, 250, 700]);
             Alert.alert(
               'Nova localização recebida',
               `Alguém escaneou um QR Code da ${familia.name} e compartilhou a posição.`,
