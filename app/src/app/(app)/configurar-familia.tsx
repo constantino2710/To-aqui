@@ -575,10 +575,12 @@ export default function ConfigurarFamiliaScreen() {
                 <QRCode
                   value={finderUrl(qrAberto.token)}
                   size={Math.min(width - 96, 320)}
-                  // O QR precisa de alto contraste mesmo com o app em tema
-                  // escuro; usar as cores do tema deixava branco sobre branco.
-                  color={Palette.ink}
+                  // Contraste e margem silenciosa ajudam câmeras a reconhecer
+                  // a imagem, inclusive quando ela é exibida em outra tela.
+                  color={Palette.charcoal}
                   backgroundColor={Palette.white}
+                  quietZone={20}
+                  ecl="H"
                 />
               )}
             </View>
@@ -593,6 +595,13 @@ export default function ConfigurarFamiliaScreen() {
               Ao escanear, abre o site público para autorizar o envio da localização.
             </ThemedText>
 
+            {qrAberto && (
+              <SecondaryButton
+                label="Abrir link de teste"
+                tom="marca"
+                onPress={() => void Linking.openURL(finderUrl(qrAberto.token))}
+              />
+            )}
             <PrimaryButton label="Fechar" onPress={() => setQrAberto(null)} />
           </View>
         </View>
