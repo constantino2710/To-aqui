@@ -116,7 +116,9 @@ export default function ConfigurarFamiliaScreen() {
       if (!sessoesAtivas.error) setSessoes((sessoesAtivas.data ?? []) as SessaoRastreamento[]);
       if (!localizacoes.error) setPings((localizacoes.data ?? []) as PingLocalizacao[]);
 
-      const error = grupos.error ?? pessoas.error ?? convidaveis.error ?? qrCodes.error ?? sessoesAtivas.error ?? localizacoes.error;
+      // O rastreamento é complementar à configuração da família. Uma falha
+      // temporária nele não pode esconder o nome, membros ou QR Codes.
+      const error = grupos.error ?? pessoas.error ?? convidaveis.error ?? qrCodes.error;
       if (error) {
         Alert.alert('Não foi possível carregar', traduzErroBanco(error.message));
         return;
@@ -168,8 +170,15 @@ export default function ConfigurarFamiliaScreen() {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'tracking_sessions', filter: `group_id=eq.${groupId}` },
-        () => void carregar()
+        { event: 'UPDATE', schema: 'public', table: 'tracking_sessions', filter: `group_id=eq.${groupId}` },
+        (payload) => {
+          const sessao = payload.new as SessaoRastreamento;
+          setSessoes((atuais) => {
+            if (sessao.status !== 'active') return atuais.filter((item) => item.id !== sessao.id);
+            return [sessao, ...atuais.filter((item) => item.id !== sessao.id)]
+              .sort((a, b) => b.started_at.localeCompare(a.started_at));
+          });
+        }
       )
       .subscribe();
 
