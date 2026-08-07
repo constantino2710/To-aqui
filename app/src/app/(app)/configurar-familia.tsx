@@ -14,7 +14,7 @@ import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
 import { TextField } from '@/components/text-field';
-import { Radii, Spacing } from '@/constants/theme';
+import { Palette, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
@@ -575,8 +575,10 @@ export default function ConfigurarFamiliaScreen() {
                 <QRCode
                   value={finderUrl(qrAberto.token)}
                   size={Math.min(width - 96, 320)}
-                  color={theme.text}
-                  backgroundColor={theme.onBrand}
+                  // O QR precisa de alto contraste mesmo com o app em tema
+                  // escuro; usar as cores do tema deixava branco sobre branco.
+                  color={Palette.ink}
+                  backgroundColor={Palette.white}
                 />
               )}
             </View>
