@@ -34,4 +34,8 @@ h2 { margin-bottom: 8px; font-size: 22px; }
 button:disabled { cursor: wait; opacity: .6; }
 .privacy { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; padding: 0 8px; }
 .privacy span { color: var(--color-brand); }
+.map-section { display: grid; gap: 12px; }
+.map-section h2 { margin: 0; font-size: 18px; }
+.live-map { height: 260px; overflow: hidden; border-radius: 16px; border: 1px solid var(--color-border); }
+.live-map .leaflet-container { height: 100%; width: 100%; font: inherit; }
 @media (max-width: 480px) { .page { padding: 32px 0; } .card { padding: 20px; } }
