@@ -133,7 +133,7 @@ export default function ConfigurarFamiliaScreen() {
       );
       if (!familia) {
         Alert.alert('Família não encontrada', 'Você não participa mais desta família.');
-        router.back();
+        router.replace('/');
         return;
       }
 
@@ -412,7 +412,7 @@ export default function ConfigurarFamiliaScreen() {
               onPress={() => setEditandoNome(true)}
             />
           )}
-          <BotaoIcone icone="arrow-back" label="Voltar" onPress={() => router.back()} />
+          <BotaoIcone icone="arrow-back" label="Voltar para o início" onPress={() => router.replace('/')} />
         </View>
       }
       aoAtualizar={carregar}

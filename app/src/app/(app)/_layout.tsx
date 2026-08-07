@@ -19,7 +19,7 @@ const ABAS = [
 export default function AppLayout() {
   useLocationAlerts();
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <BarraInferior {...props} />}>
+    <Tabs initialRouteName="index" screenOptions={{ headerShown: false }} tabBar={(props) => <BarraInferior {...props} />}>
       <Tabs.Screen name="comunidade" options={{ title: 'Comunidade' }} />
       <Tabs.Screen name="index" options={{ title: 'Início' }} />
       <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
