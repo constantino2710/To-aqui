@@ -1,0 +1,138 @@
+Tecnologia inovação 
+
+
+1.Nome do Projeto:
+A Rota/Encontraê
+
+2.Frase que define o projeto:
+
+Um aplicativo para promover o reencontro de pessoas e animais perdidas.
+
+3.Atores de Inovação Social:
+
+Responsáveis: cadastram o dependente e fixam o QR Code em coleiras, pulseiras, mochilas ou roupas.
+Cidadão colaborador: escaneia o QR Code, autoriza a localização e entra em contato com o responsável.
+Prefeitura do Recife: divulga a solução, integra o sistema às políticas públicas e amplia sua adoção na cidade.
+ONGs: apoiam o cadastramento em comunidades vulneráveis e auxiliam em casos de risco.
+
+
+4.Análise SWOT
+
+Forças:
+
+Proposta de valor clara e objetiva: Foco em um problema real e de alto impacto social em centros urbanos densos, facilitando a validação de escopo e o direcionamento do MVP.
+
+Arquitetura enxuta e baixo custo: Utilização de tecnologias baseadas em QR Codes dinâmicos e páginas web leves (ou PWA), o que minimiza a complexidade de infraestrutura e custos iniciais de hospedagem
+
+Centralização e rastreabilidade dinâmica: O sistema utiliza QR codes dinâmicos vinculados a um perfil centralizado, permitindo que os dados de contato do responsável sejam atualizados a qualquer momento sem a necessidade de reimprimir ou trocar as etiquetas físicas já fixadas nas coleiras ou roupas.
+
+Fraquezas:
+
+Dependência da colaboração de terceiros: O resgate só funciona se quem encontra o dependente escanear o QR Code, autorizar a localização e manter a página aberta até o responsável chegar. O navegador pausa a localização quando a tela é bloqueada. Então, se a pessoa negar a permissão ou guardar o celular, o acompanhamento em tempo real se perde.
+
+Dependência de conexão à internet: O compartilhamento ao vivo exige internet no celular de quem encontrou e no do responsável. Em eventos lotados, como Carnaval e shows, a rede móvel costuma ficar congestionada justamente quando as crianças mais se perdem.
+
+Modelo de receita dependente do setor público: Para as famílias o uso é gratuito, o que é necessário para ganhar adesão, mas não gera receita. A sustentação financeira depende de contratos com prefeituras e organizadores de eventos, que são processos lentos e incertos.
+
+Falta de redundância técnica: Dependência crítica do conhecimento individual de cada integrante em frentes específicas do projeto; caso algum membro fique sobrecarregado, entregas inteiras podem atrasar.
+
+Orçamento limitado: Restrições financeiras típicas de projetos acadêmicos para campanhas de marketing digital, tráfego pago ou contratação de serviços de nuvem robustos.
+
+Oportunidades:
+
+Demografia e contexto urbano: A alta densidade populacional e o fluxo intenso em Recife criam um cenário propício para testar soluções de segurança comunitária e geo-localização rápida.
+
+Aumento da cultura mobile e uso de QR Codes: A familiaridade generalizada da população com o escaneamento de QR Codes (impulsionada por meios de pagamento e serviços digitais) reduz a barreira de adoção pelo usuário final.
+
+Potencial de validação acadêmica e expansão gradual: O ambiente universitário e oferece um espaço seguro para testes controlados, coleta de feedback e refinamento do produto antes de qualquer tentativa de escalabilidade maior.
+
+Ameaças 
+
+Conformidade rigorosa com a LGPD: O tratamento de dados sensíveis de menores de idade e o rastreamento de geolocalização exigem rígidos padrões de segurança e privacidade, sob risco de sanções severas.
+
+Desconfiança do cidadão: O receio de golpes cibernéticos, páginas de phishing ou malwares disfarçados em QR Codes públicos pode desestimular cidadãos comuns a realizarem o escaneamento por medo de cair em armadilhas.
+
+Desafio de adoção e engajamento inicial: O maior obstáculo não é a concorrência, mas sim convencer as famílias a comprarem ou adotarem a prática de fixar o QR Code (em pulseiras, coleiras ou roupas) e garantir que terceiros saibam como agir prontamente ao encontrá-lo.
+
+Cruzamento:
+
+Estratégia SO (Ofensiva — Forças + Oportunidades): Utilizar  a clareza da proposta de valor e a rastreabilidade dinâmica  para criar um MVP altamente focado na facilidade de uso, aproveitando a alta familiaridade das pessoas com QR Codes para validar o sistema rapidamente em testes comunitários controlados.
+
+Estratégia ST (Confronto — Forças + Ameaças): Empregar uma arquitetura de desenvolvimento limpa e focada em privacidade para garantir total conformidade com a LGPD e mitigar o receio de golpes, blindando o sistema contra desconfianças de segurança.
+
+Estratégia WO (Reforço — Fraquezas + Oportunidades): Compensar a escassez de recursos humanos e orçamento de marketing apostando no engajamento orgânico e em redes de apoio comunitário de bairro para tracionar os primeiros cadastros de forma colaborativa.
+
+Estratégia WT (Defensiva — Fraquezas + Ameaças): Reduzir a dependência da colaboração e a desconfiança do cidadão com uma página simples e transparente. Ela deve abrir sem instalar nada, não pedir nenhum dado pessoal, mostrar o botão de parar sempre visível e deixar claro que o compartilhamento é temporário. Assim, quem encontra o dependente se sente seguro para ajudar sem medo de golpe.
+
+5.Possiveis Agentes de fomento e financiamento
+
+FINEP Maior financiadora de inovação do país. Trabalha com subvenção econômica – dinheiro que não se devolve e não dilui a empresa. Tem linha temática de Cidades Inteligentes, que cobre eventos de massa: carnaval, praia, parque.
+
+FAPs (FACEPE, em Pernambuco) O balcão estadual. Valores menores, mas compatíveis com estágio inicial e concorrência muito menor que a federal. É por onde passam também o Centelha e o Tecnova.
+
+CPSI – Marco Legal das Startups Não é fomento, é compra pública: a prefeitura contrata a startup para desenvolver e testar a solução. Entra na lista porque o modelo de negócio do projeto é B2G – e Recife já gasta dinheiro nesse problema.
+
+6.Valor ou custo real para viabilizar o projeto
+
+Premissas: 1.000 usuários ativos por mês, cotação de US$ 1 = R$ 5,50.
+
+Supabase (banco de dados, login e tempo real) – Plano Pro, US$ 25/mês – ≈ R$ 1.650/ano: O plano gratuito pausa o projeto após 7 dias sem uso e não tem backup diário, o que não é aceitável num app de segurança. O Pro também aumenta o número de conexões simultâneas em tempo real, importante em eventos.
+
+Apple Developer – US$ 99/ano – ≈ R$ 545/ano: Obrigatório para publicar na App Store.
+
+Google Play Console – US$ 25, pagamento único – ≈ R$ 140: Obrigatório para publicar na Play Store.
+
+Domínio .com.br (Registro.br) – ≈ R$ 40/ano: O endereço fica gravado no QR impresso, então não pode mudar depois. Um domínio próprio também passa mais confiança para quem escaneia.
+
+Total no 1º ano: ≈ R$ 2.375 (cerca de R$ 200/mês).
+Total nos anos seguintes: ≈ R$ 2.235/ano.
+
+7.Detalhamento do projeto e método de realização
+
+Como funciona:
+
+Antes: o responsável cria a conta no app, monta a família (outros responsáveis entram por convite) e gera um QR Code para cada dependente. Ele imprime o código e o fixa em pulseira, coleira, mochila ou roupa.
+
+Na hora: quem encontra o dependente escaneia o QR com a câmera. Abre uma página web, sem instalar nada. Ao autorizar a localização, a posição passa a ser enviada em tempo real, e todos os responsáveis da família veem o ponto se movendo no mapa. Quem ajudou também vê o responsável se aproximando.
+
+Encerramento: o responsável marca "encontrei" ou quem ajudou aperta "parar", e o compartilhamento termina na hora.
+
+Tecnologias:
+
+App dos responsáveis: React Native (Expo), para Android e iOS.
+Página de quem escaneia: site web leve, que abre direto pelo QR Code.
+Backend: Supabase (banco de dados, login e atualização em tempo real).
+Mapas: OpenStreetMap.
+
+Privacidade e LGPD:
+
+QR cego: quem escaneia não vê nome nem dados do dependente, e o responsável não vê a identidade de quem ajudou.
+O QR guarda só um código aleatório, impossível de adivinhar.
+O momento em que a pessoa autorizou a localização fica registrado, como prova de consentimento.
+O compartilhamento é temporário: tem botão de parar e termina sozinho após 1 hora sem atualização.
+O trajeto é apagado automaticamente após 90 dias.
+
+Metodologia:
+
+Design Thinking para entender o problema com famílias e cidadãos.
+Lean Startup (construir, medir, aprender) para validar rápido.
+Desenvolvimento em sprints de 2 semanas.
+Primeiro vem o modo "single player": o produto precisa funcionar completo para uma única família. A rede colaborativa só entra depois, quando houver usuários suficientes.
+
+Etapas e cronograma:
+
+1. Pesquisa e imersão (concluída): análise de concorrentes (Toque AI, programa da Prefeitura do Recife) e definição da ideia.
+2. Protótipo (MVP) – setembro a outubro de 2026: app, página do QR e banco funcionando; em seguida, notificações push e plano B sem GPS.
+3. Testes controlados – novembro a dezembro de 2026: testes na universidade e com grupos de famílias; ajustes de usabilidade.
+4. Piloto em evento – janeiro a fevereiro de 2027: cadastro de famílias com apoio de ONGs e da Prefeitura; uso no Carnaval 2027.
+5. Avaliação – março a abril de 2027: análise dos indicadores e relatório do piloto.
+6. Expansão – a partir de maio de 2027: São João 2027 e proposta de contratação pública (CPSI).
+
+Indicadores de sucesso:
+
+Número de QR Codes cadastrados.
+Taxa de pessoas que escaneiam e autorizam a localização.
+Tempo entre o escaneamento e o reencontro.
+Percentual de casos encerrados com "encontrei".
+Satisfação de famílias e colaboradores (questionário pós-uso).
+

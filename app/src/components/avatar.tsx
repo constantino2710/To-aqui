@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { AvatarColors, Palette } from '@/constants/theme';
 
 export type AvatarProps = {
   /** Nome completo. As iniciais saem daqui. */
@@ -12,15 +12,7 @@ export type AvatarProps = {
 };
 
 // Paleta com contraste suficiente para texto branco por cima, nos dois temas.
-const FUNDOS = [
-  Palette.pink,
-  Palette.purple500,
-  Palette.purple700,
-  Palette.blue,
-  Palette.green,
-  Palette.orange,
-  Palette.red,
-];
+const FUNDOS = AvatarColors;
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean);

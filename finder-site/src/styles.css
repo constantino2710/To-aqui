@@ -1,41 +1,98 @@
-:root {
-  --color-text: #211f2d;
-  --color-text-secondary: #5f5b6b;
-  --color-background: #f7f4ff;
-  --color-surface: #ffffff;
-  --color-brand: #6732ee;
-  --color-brand-soft: #eee8ff;
-  --color-success: #31b978;
-  --color-danger: #e5484d;
-  --color-border: #eae6f2;
-  --color-shadow: rgba(54, 28, 117, .14);
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: var(--color-text);
-  background: var(--color-background);
-  font-synthesis: none;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   To Aqui — contrato de cores Emerald (estilo shadcn, variáveis HSL).
+   Mantenha estes tokens iguais aos do app (app/src/constants/theme.ts).
+   Claro e escuro seguem o tema do sistema automaticamente.
+   --------------------------------------------------------------------------- */
+@layer base {
+  :root {
+    --background: 138 76% 97%;
+    --foreground: 158 42% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 158 42% 11%;
+
+    --primary: 163 94% 24%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 149 72% 92%;
+    --secondary-foreground: 163 88% 20%;
+
+    --muted: 152 60% 95%;
+    --muted-foreground: 155 16% 40%;
+
+    --accent: 149 72% 92%;
+    --accent-foreground: 163 88% 20%;
+
+    --destructive: 358 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 163 94% 24%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 150 24% 88%;
+    --input: 150 24% 88%;
+    --ring: 160 84% 39%;
+
+    --radius: 1rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --background: 158 46% 8%;
+      --foreground: 150 40% 96%;
+
+      --card: 157 40% 12%;
+      --card-foreground: 150 40% 96%;
+
+      --primary: 158 64% 52%;
+      --primary-foreground: 160 84% 9%;
+
+      --secondary: 157 34% 18%;
+      --secondary-foreground: 150 50% 92%;
+
+      --muted: 157 30% 16%;
+      --muted-foreground: 150 16% 66%;
+
+      --accent: 157 34% 20%;
+      --accent-foreground: 150 50% 92%;
+
+      --destructive: 358 62% 60%;
+      --destructive-foreground: 0 0% 100%;
+
+      --success: 158 64% 52%;
+      --success-foreground: 160 84% 9%;
+
+      --border: 150 26% 20%;
+      --input: 150 26% 20%;
+      --ring: 158 64% 52%;
+    }
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Spline Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    min-height: 100vh;
+  }
 }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
-button { font: inherit; }
-.page { width: min(100% - 32px, 560px); margin: 0 auto; padding: 56px 0; display: grid; gap: 24px; }
-.hero { display: grid; gap: 8px; }
-.eyebrow { color: var(--color-brand); font-size: 12px; font-weight: 800; letter-spacing: .14em; }
-h1, h2, p { margin: 0; }
-h1 { font-size: clamp(30px, 8vw, 44px); line-height: 1.08; letter-spacing: -.035em; }
-.hero p, .message, .privacy { color: var(--color-text-secondary); line-height: 1.55; }
-.card { padding: 24px; border: 1px solid var(--color-border); border-radius: 24px; background: var(--color-surface); box-shadow: 0 18px 50px var(--color-shadow); display: grid; gap: 24px; }
-.location-icon { width: 72px; height: 72px; border-radius: 24px; display: grid; place-items: center; color: var(--color-brand); background: var(--color-brand-soft); font-size: 40px; font-weight: 800; }
-.location-icon.done { color: var(--color-success); }
-h2 { margin-bottom: 8px; font-size: 22px; }
-.primary, .secondary { width: 100%; min-height: 52px; padding: 12px 18px; border-radius: 14px; border: 0; font-weight: 750; cursor: pointer; }
-.primary { color: var(--color-surface); background: var(--color-brand); box-shadow: 0 8px 20px var(--color-shadow); }
-.secondary { color: var(--color-brand); background: var(--color-brand-soft); }
-.secondary.danger { color: var(--color-danger); }
-button:disabled { cursor: wait; opacity: .6; }
-.privacy { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; padding: 0 8px; }
-.privacy span { color: var(--color-brand); }
-.map-section { display: grid; gap: 12px; }
-.map-section h2 { margin: 0; font-size: 18px; }
-.live-map { height: 260px; overflow: hidden; border-radius: 16px; border: 1px solid var(--color-border); }
-.live-map .leaflet-container { height: 100%; width: 100%; font: inherit; }
-@media (max-width: 480px) { .page { padding: 32px 0; } .card { padding: 20px; } }
+
+/* O mapa Leaflet vive fora do fluxo de componentes; mantemos só o essencial. */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  font: inherit;
+  border-radius: calc(var(--radius) - 4px);
+}

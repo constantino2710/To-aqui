@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   To Aqui — contrato de cores Emerald (estilo shadcn, variáveis HSL).
+   Mantenha estes tokens iguais aos do site (finder-site/src/styles.css) e
+   espelhados em src/constants/theme.ts. Claro e escuro seguem o tema do
+   sistema automaticamente (darkMode: 'media').
+   --------------------------------------------------------------------------- */
+@layer base {
+  :root {
+    --background: 138 76% 97%;
+    --foreground: 158 42% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 158 42% 11%;
+
+    --primary: 163 94% 24%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 149 72% 92%;
+    --secondary-foreground: 163 88% 20%;
+
+    --muted: 152 60% 95%;
+    --muted-foreground: 155 16% 40%;
+
+    --accent: 149 72% 92%;
+    --accent-foreground: 163 88% 20%;
+
+    --destructive: 358 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 163 94% 24%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 150 24% 88%;
+    --input: 150 24% 88%;
+    --ring: 160 84% 39%;
+
+    --radius: 1rem;
+
+    --font-display: 'Spline Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
+    --font-serif: Georgia, 'Times New Roman', serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 158 46% 8%;
+      --foreground: 150 40% 96%;
+
+      --card: 157 40% 12%;
+      --card-foreground: 150 40% 96%;
+
+      --primary: 158 64% 52%;
+      --primary-foreground: 160 84% 9%;
+
+      --secondary: 157 34% 18%;
+      --secondary-foreground: 150 50% 92%;
+
+      --muted: 157 30% 16%;
+      --muted-foreground: 150 16% 66%;
+
+      --accent: 157 34% 20%;
+      --accent-foreground: 150 50% 92%;
+
+      --destructive: 358 62% 60%;
+      --destructive-foreground: 0 0% 100%;
+
+      --success: 158 64% 52%;
+      --success-foreground: 160 84% 9%;
+
+      --border: 150 26% 20%;
+      --input: 150 26% 20%;
+      --ring: 158 64% 52%;
+    }
+  }
+}

@@ -57,20 +57,22 @@ export function SecondaryButton({
 
 const styles = StyleSheet.create({
   botao: {
-    borderWidth: 1,
-    borderRadius: Radii.medium,
+    borderWidth: 1.5,
+    borderRadius: Radii.large,
     alignItems: 'center',
     justifyContent: 'center',
   },
   normal: {
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.three,
-    minHeight: 48,
+    minHeight: 50,
   },
   compacto: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.two,
-    minHeight: 32,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    minHeight: 38,
+    borderRadius: Radii.pill,
+    alignSelf: 'flex-start',
   },
   inativo: {
     opacity: 0.4,

@@ -5,6 +5,7 @@ import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
+import { Fab } from '@/components/fab';
 import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
@@ -91,7 +92,13 @@ export default function HomeScreen() {
       titulo="Minhas famílias"
       subtitulo="As pessoas que cuidam juntas."
       aoAtualizar={carregar}
-      atualizando={carregando}>
+      atualizando={carregando}
+      fab={
+        <Fab
+          accessibilityLabel="Criar família"
+          onPress={() => router.push('/configurar-familia' as Href)}
+        />
+      }>
       <View style={styles.busca}>
         <TextInput
           placeholder="Digite o nome da família"
@@ -196,11 +203,6 @@ export default function HomeScreen() {
               </View>
             </Card>
           ))}
-
-          <PrimaryButton
-            label="Criar outra família"
-            onPress={() => router.push('/configurar-familia' as Href)}
-          />
         </View>
       )}
     </Screen>

@@ -1,18 +1,23 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Card } from '@/components/card';
+import { DevAccountSwitcher } from '@/components/dev-account-switcher';
 import { PrimaryButton } from '@/components/primary-button';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Radii, Spacing } from '@/constants/theme';
+import { Radii, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroAuth } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
+  const theme = useTheme();
   const { confirmError } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -40,28 +45,31 @@ export default function LoginScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.safeArea}>
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled">
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.content}>
               <View style={styles.cabecalho}>
-                <ThemedText type="subtitle">Entrar</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Use seu e-mail e senha para acessar.
-                </ThemedText>
+                <View style={[styles.marca, { backgroundColor: theme.brand }]}>
+                  <Ionicons name="location" size={30} color={theme.onBrand} />
+                </View>
+                <View style={styles.titulos}>
+                  <ThemedText type="subtitle">Bem-vindo de volta</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Entre para acompanhar sua família no To Aqui.
+                  </ThemedText>
+                </View>
               </View>
 
               {confirmError && (
-                <ThemedView type="backgroundElement" style={styles.aviso}>
+                <ThemedView type="backgroundSelected" style={styles.aviso}>
                   <ThemedText type="small">{confirmError}</ThemedText>
                 </ThemedView>
               )}
 
-              <View style={styles.formulario}>
+              <Card style={styles.card}>
                 <TextField
                   label="E-mail"
                   value={email}
@@ -86,20 +94,15 @@ export default function LoginScreen() {
                   onSubmitEditing={() => podeEnviar && entrar()}
                   returnKeyType="go"
                 />
-              </View>
 
-              {erro && (
-                <ThemedText type="small" themeColor="danger">
-                  {erro}
-                </ThemedText>
-              )}
+                {erro && (
+                  <ThemedText type="small" themeColor="danger">
+                    {erro}
+                  </ThemedText>
+                )}
 
-              <PrimaryButton
-                label="Entrar"
-                onPress={entrar}
-                loading={enviando}
-                disabled={!podeEnviar}
-              />
+                <PrimaryButton label="Entrar" onPress={entrar} loading={enviando} disabled={!podeEnviar} />
+              </Card>
 
               <View style={styles.rodape}>
                 <ThemedText type="small" themeColor="textSecondary">
@@ -109,6 +112,8 @@ export default function LoginScreen() {
                   <ThemedText type="linkPrimary">Cadastre-se</ThemedText>
                 </Link>
               </View>
+
+              <DevAccountSwitcher label="Trocar de conta" />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -121,34 +126,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
-  },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: Spacing.four,
+    paddingVertical: Spacing.five,
+    paddingHorizontal: Spacing.four,
   },
   content: {
     width: '100%',
-    maxWidth: MaxContentWidth,
+    maxWidth: 460,
     alignSelf: 'center',
     gap: Spacing.four,
   },
   cabecalho: {
-    gap: Spacing.one,
-  },
-  formulario: {
     gap: Spacing.three,
   },
+  marca: {
+    width: 56,
+    height: 56,
+    borderRadius: Radii.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titulos: {
+    gap: Spacing.one,
+  },
   aviso: {
-    borderRadius: Radii.medium,
     padding: Spacing.three,
+    borderRadius: Radii.medium,
+  },
+  card: {
+    gap: Spacing.three,
+    padding: Spacing.four,
   },
   rodape: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.two,
+    alignItems: 'center',
+    gap: Spacing.one,
   },
 });

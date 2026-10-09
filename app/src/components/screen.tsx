@@ -18,6 +18,8 @@ export type ScreenProps = {
   atualizando?: boolean;
   /** Para telas que gerenciam a própria rolagem (uma FlatList, por exemplo). */
   semRolagem?: boolean;
+  /** Botão flutuante opcional, fixo sobre o conteúdo (ver componente `Fab`). */
+  fab?: ReactNode;
 };
 
 /**
@@ -33,6 +35,7 @@ export function Screen({
   aoAtualizar,
   atualizando = false,
   semRolagem = false,
+  fab,
 }: ScreenProps) {
   const theme = useTheme();
 
@@ -81,6 +84,7 @@ export function Screen({
           </ScrollView>
         )}
       </SafeAreaView>
+      {fab}
     </ThemedView>
   );
 }

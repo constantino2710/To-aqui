@@ -11,6 +11,7 @@ export type PrimaryButtonProps = {
   disabled?: boolean;
 };
 
+/** Ação principal da tela: preenchida com a cor da marca. Uma por tela. */
 export function PrimaryButton({ label, onPress, loading = false, disabled = false }: PrimaryButtonProps) {
   const theme = useTheme();
   const inativo = disabled || loading;
@@ -21,7 +22,7 @@ export function PrimaryButton({ label, onPress, loading = false, disabled = fals
       disabled={inativo}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.button,
+        styles.botao,
         { backgroundColor: theme.brand, shadowColor: theme.shadow },
         inativo && styles.inativo,
         pressed && !inativo && styles.pressionado,
@@ -38,24 +39,26 @@ export function PrimaryButton({ label, onPress, loading = false, disabled = fals
 }
 
 const styles = StyleSheet.create({
-  button: {
-    borderRadius: Radii.medium,
+  botao: {
+    minHeight: 54,
+    borderRadius: Radii.large,
     paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 1,
-    shadowRadius: 12,
+    shadowRadius: 14,
     elevation: 4,
+  },
+  label: {
+    fontSize: 16,
   },
   inativo: {
     opacity: 0.5,
   },
   pressionado: {
-    opacity: 0.8,
-  },
-  label: {
-    fontSize: 16,
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
   },
 });

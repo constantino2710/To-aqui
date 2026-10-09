@@ -11,6 +11,7 @@ quem escaneia um QR Code.
 | [`finder-site/`](./finder-site) | Consentimento e envio da localização pelo navegador | React / Vite |
 | [`app/supabase/`](./app/supabase) | Banco, segurança e API pública do rastreamento | Supabase / PostgreSQL |
 | [`CONCEITO.md`](./CONCEITO.md) | Conceito e decisões do produto | Documentação |
+| [`DESIGN.md`](./DESIGN.md) | Padrão de design: cores Emerald, shadcn/ui e react-native-reusables | Documentação |
 
 Cada projeto mantém suas próprias dependências e seu próprio arquivo `.env`.
 As credenciais locais são ignoradas pelo Git; somente os `.env.example` são

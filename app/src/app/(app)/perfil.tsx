@@ -1,9 +1,10 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Switch, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
+import { DevAccountSwitcher } from '@/components/dev-account-switcher';
 import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
@@ -34,7 +35,6 @@ export default function PerfilScreen() {
   const [editando, setEditando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [saindo, setSaindo] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!session) return;
@@ -86,13 +86,6 @@ export default function PerfilScreen() {
     Alert.alert('Perfil atualizado', 'Suas informações foram salvas.');
   }
 
-  async function sair() {
-    setSaindo(true);
-    const { error } = await supabase.auth.signOut();
-    setSaindo(false);
-    if (error) Alert.alert('Não foi possível sair', error.message);
-  }
-
   return (
     <Screen titulo="Meu perfil" subtitulo="Suas informações e sua identidade na comunidade." aoAtualizar={carregar} atualizando={carregando}>
       {perfil && (
@@ -139,7 +132,7 @@ export default function PerfilScreen() {
               <View style={styles.temaTextos}>
                 <ThemedText type="smallBold">Tema claro</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  Use o fundo claro e lavanda do design do aplicativo.
+                  Use o fundo claro e verde do aplicativo.
                 </ThemedText>
               </View>
               <Switch
@@ -154,7 +147,7 @@ export default function PerfilScreen() {
         </>
       )}
 
-      <SecondaryButton label="Sair da conta" tom="perigo" onPress={sair} loading={saindo} />
+      <DevAccountSwitcher currentEmail={session?.user.email} aposTrocar={() => router.replace('/')} />
     </Screen>
   );
 }

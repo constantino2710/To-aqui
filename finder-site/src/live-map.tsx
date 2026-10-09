@@ -16,11 +16,11 @@ function AdjustBounds({ finder, responsible }: { finder?: Point; responsible?: P
 
 export function LiveMap({ finder, responsible }: { finder?: Point; responsible?: Point }) {
   const center: LatLngExpression = finder ? [finder.lat, finder.lng] : responsible ? [responsible.lat, responsible.lng] : [-14.235, -51.9253];
-  return <div className="live-map" aria-label="Mapa das localizações compartilhadas">
+  return <div className="h-64 w-full overflow-hidden rounded-md border border-border" aria-label="Mapa das localizações compartilhadas">
     <MapContainer center={center} zoom={finder || responsible ? 16 : 4} scrollWheelZoom={false}>
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <AdjustBounds finder={finder} responsible={responsible} />
-      {finder && <CircleMarker center={[finder.lat, finder.lng]} radius={10} pathOptions={{ color: '#6732ee', fillColor: '#6732ee', fillOpacity: 1 }}><Tooltip permanent direction="top">Sua localização</Tooltip></CircleMarker>}
+      {finder && <CircleMarker center={[finder.lat, finder.lng]} radius={10} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1 }}><Tooltip permanent direction="top">Sua localização</Tooltip></CircleMarker>}
       {responsible && <CircleMarker center={[responsible.lat, responsible.lng]} radius={10} pathOptions={{ color: '#e5484d', fillColor: '#e5484d', fillOpacity: 1 }}><Tooltip permanent direction="top">Responsável</Tooltip></CircleMarker>}
     </MapContainer>
   </div>;

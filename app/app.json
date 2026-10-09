@@ -41,7 +41,11 @@
         {
           "locationWhenInUsePermission": "Permita que o To Aqui use sua localização para mostrá-la a quem escaneou seu QR Code."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,0 +1,51 @@
+4. Análise SWOT
+
+FORÇAS:
+
+Proposta de valor clara e objetiva: Foco em um problema real e de alto impacto social em centros urbanos densos, facilitando a validação de escopo e o direcionamento do MVP.
+
+Arquitetura enxuta e baixo custo: Utilização de tecnologias baseadas em QR Codes dinâmicos e páginas web leves (ou PWA), o que minimiza a complexidade de infraestrutura e custos iniciais de hospedagem.
+
+Centralização e rastreabilidade dinâmica: O sistema utiliza QR codes dinâmicos vinculados a um perfil centralizado, permitindo que os dados de contato do responsável sejam atualizados a qualquer momento sem a necessidade de reimprimir ou trocar as etiquetas físicas já fixadas nas coleiras ou roupas.
+
+
+FRAQUEZAS:
+
+Dependência da colaboração de terceiros: O resgate só funciona se quem encontra o dependente escanear o QR Code, autorizar a localização e manter a página aberta até o responsável chegar. O navegador pausa a localização quando a tela é bloqueada. Então, se a pessoa negar a permissão ou guardar o celular, o acompanhamento em tempo real se perde.
+
+Dependência de conexão à internet: O compartilhamento ao vivo exige internet no celular de quem encontrou e no do responsável. Em eventos lotados, como Carnaval e shows, a rede móvel costuma ficar congestionada justamente quando as crianças mais se perdem.
+
+Modelo de receita dependente do setor público: Para as famílias o uso é gratuito, o que é necessário para ganhar adesão, mas não gera receita. A sustentação financeira depende de contratos com prefeituras e organizadores de eventos, que são processos lentos e incertos.
+
+Falta de redundância técnica: Dependência crítica do conhecimento individual de cada integrante em frentes específicas do projeto; caso algum membro fique sobrecarregado, entregas inteiras podem atrasar.
+
+Orçamento limitado: Restrições financeiras típicas de projetos acadêmicos para campanhas de marketing digital, tráfego pago ou contratação de serviços de nuvem robustos.
+
+
+OPORTUNIDADES:
+
+Demografia e contexto urbano: A alta densidade populacional e o fluxo intenso em Recife criam um cenário propício para testar soluções de segurança comunitária e geo-localização rápida.
+
+Aumento da cultura mobile e uso de QR Codes: A familiaridade generalizada da população com o escaneamento de QR Codes (impulsionada por meios de pagamento e serviços digitais) reduz a barreira de adoção pelo usuário final.
+
+Potencial de validação acadêmica e expansão gradual: O ambiente universitário e oferece um espaço seguro para testes controlados, coleta de feedback e refinamento do produto antes de qualquer tentativa de escalabilidade maior.
+
+
+AMEAÇAS:
+
+Conformidade rigorosa com a LGPD: O tratamento de dados sensíveis de menores de idade e o rastreamento de geolocalização exigem rígidos padrões de segurança e privacidade, sob risco de sanções severas.
+
+Desconfiança do cidadão: O receio de golpes cibernéticos, páginas de phishing ou malwares disfarçados em QR Codes públicos pode desestimular cidadãos comuns a realizarem o escaneamento por medo de cair em armadilhas.
+
+Desafio de adoção e engajamento inicial: O maior obstáculo não é a concorrência, mas sim convencer as famílias a comprarem ou adotarem a prática de fixar o QR Code (em pulseiras, coleiras ou roupas) e garantir que terceiros saibam como agir prontamente ao encontrá-lo.
+
+
+CRUZAMENTO:
+
+Estratégia SO (Ofensiva — Forças + Oportunidades): Utilizar a clareza da proposta de valor e a rastreabilidade dinâmica para criar um MVP altamente focado na facilidade de uso, aproveitando a alta familiaridade das pessoas com QR Codes para validar o sistema rapidamente em testes comunitários controlados.
+
+Estratégia ST (Confronto — Forças + Ameaças): Empregar uma arquitetura de desenvolvimento limpa e focada em privacidade para garantir total conformidade com a LGPD e mitigar o receio de golpes, blindando o sistema contra desconfianças de segurança.
+
+Estratégia WO (Reforço — Fraquezas + Oportunidades): Compensar a escassez de recursos humanos e orçamento de marketing apostando no engajamento orgânico e em redes de apoio comunitário de bairro para tracionar os primeiros cadastros de forma colaborativa.
+
+Estratégia WT (Defensiva — Fraquezas + Ameaças): Reduzir a dependência da colaboração e a desconfiança do cidadão com uma página simples e transparente. Ela deve abrir sem instalar nada, não pedir nenhum dado pessoal, mostrar o botão de parar sempre visível e deixar claro que o compartilhamento é temporário. Assim, quem encontra o dependente se sente seguro para ajudar sem medo de golpe.
