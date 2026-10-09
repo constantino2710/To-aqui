@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "To Aqui",
+    "name": "Found",
     "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/to-aqui-logo.png",
+    "icon": "./assets/images/found-app-icon-v2.png",
     "scheme": "app",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/to-aqui-logo.png"
+      "icon": "./assets/images/found-app-icon-v2.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/to-aqui-logo.png"
+        "backgroundColor": "#F7F5F2",
+        "foregroundImage": "./assets/images/found-logo-v2.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -24,22 +24,37 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/found-app-icon-v2.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFFFFF",
-          "image": "./assets/images/to-aqui-logo.png",
+          "backgroundColor": "#F7F5F2",
+          "image": "./assets/images/found-logo-v2.png",
           "imageWidth": 180
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Permita que o To Aqui use sua localização para mostrá-la a quem escaneou seu QR Code."
+          "locationWhenInUsePermission": "Permita que o Found use sua localização para mostrá-la a quem escaneou seu QR Code."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": false,
+          "savePhotosPermission": "Permita que o Found salve imagens de QR Code na sua galeria.",
+          "granularPermissions": []
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#405078",
+          "defaultChannel": "location-found"
         }
       ],
       "expo-font",

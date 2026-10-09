@@ -21,11 +21,10 @@ export function PrimaryButton({ label, onPress, loading = false, disabled = fals
       accessibilityRole="button"
       disabled={inativo}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.botao,
         { backgroundColor: theme.brand, shadowColor: theme.shadow },
         inativo && styles.inativo,
-        pressed && !inativo && styles.pressionado,
       ]}>
       {loading ? (
         <ActivityIndicator color={theme.onBrand} />
@@ -40,25 +39,19 @@ export function PrimaryButton({ label, onPress, loading = false, disabled = fals
 
 const styles = StyleSheet.create({
   botao: {
-    minHeight: 54,
-    borderRadius: Radii.large,
+    minHeight: 50,
+    borderRadius: Radii.medium,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 14,
-    elevation: 4,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   label: {
     fontSize: 16,
   },
   inativo: {
     opacity: 0.5,
-  },
-  pressionado: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
   },
 });

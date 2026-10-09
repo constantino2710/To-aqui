@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Tabs } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
 import { useLocationAlerts } from '@/hooks/use-location-alerts';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
 
 const ABAS = [
@@ -18,6 +19,7 @@ const ABAS = [
 
 export default function AppLayout() {
   useLocationAlerts();
+  usePushNotifications();
   return (
     <Tabs initialRouteName="index" screenOptions={{ headerShown: false }} tabBar={(props) => <BarraInferior {...props} />}>
       <Tabs.Screen name="comunidade" options={{ title: 'Comunidade' }} />
@@ -80,7 +82,7 @@ function BotaoAba({
   onPress: () => void;
 }) {
   const theme = useTheme();
-  const progresso = useRef(new Animated.Value(ativo ? 1 : 0)).current;
+  const [progresso] = useState(() => new Animated.Value(ativo ? 1 : 0));
 
   useEffect(() => {
     Animated.spring(progresso, {
@@ -91,8 +93,8 @@ function BotaoAba({
     }).start();
   }, [ativo, progresso]);
 
-  const escala = progresso.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] });
-  const elevacao = progresso.interpolate({ inputRange: [0, 1], outputRange: [0, -14] });
+  const escala = progresso.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+  const elevacao = progresso.interpolate({ inputRange: [0, 1], outputRange: [0, -4] });
 
   return (
     <Pressable
@@ -128,8 +130,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: Spacing.three,
-    minHeight: 76,
+    paddingTop: 12,
+    minHeight: 72,
   },
   botao: {
     flex: 1,
@@ -139,17 +141,14 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   conteudoBotao: {
-    width: 58,
-    height: 48,
-    borderRadius: Radii.extraLarge,
+    width: 48,
+    height: 38,
+    borderRadius: Radii.medium,
     alignItems: 'center',
     justifyContent: 'center',
   },
   abaElevada: {
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
   },
   rotulo: {
     fontSize: 11,

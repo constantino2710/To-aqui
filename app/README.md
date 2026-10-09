@@ -1,4 +1,4 @@
-# to-aqui
+# Found
 
 App em React Native (Expo) com autenticação por e-mail e senha via Supabase.
 

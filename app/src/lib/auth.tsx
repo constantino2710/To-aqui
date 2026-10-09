@@ -104,21 +104,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const url = Linking.useLinkingURL();
   useEffect(() => {
     if (!url) return;
+    let cancelado = false;
 
     const { queryParams } = Linking.parse(url);
     const code = queryParams?.code;
     const erro = queryParams?.error_description ?? queryParams?.error;
 
     if (typeof erro === 'string') {
-      setConfirmError(traduzErroAuth(decodeURIComponent(erro.replace(/\+/g, ' '))));
-      return;
+      const temporizador = setTimeout(() => {
+        if (!cancelado) {
+          setConfirmError(traduzErroAuth(decodeURIComponent(erro.replace(/\+/g, ' '))));
+        }
+      }, 0);
+      return () => {
+        cancelado = true;
+        clearTimeout(temporizador);
+      };
     }
 
     if (typeof code !== 'string') return;
 
     supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-      setConfirmError(error ? traduzErroAuth(error.message) : null);
+      if (!cancelado) setConfirmError(error ? traduzErroAuth(error.message) : null);
     });
+    return () => {
+      cancelado = true;
+    };
   }, [url]);
 
   const value = useMemo(

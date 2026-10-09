@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
@@ -10,6 +10,7 @@ import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
 import { TextField } from '@/components/text-field';
+import { useToast } from '@/components/toast';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
@@ -26,6 +27,7 @@ type Perfil = {
 
 export default function PerfilScreen() {
   const theme = useTheme();
+  const { notificar } = useToast();
   const { mode, setMode } = useThemePreference();
   const { session } = useAuth();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -47,7 +49,7 @@ export default function PerfilScreen() {
     setCarregando(false);
 
     if (error) {
-      Alert.alert('Não foi possível carregar seu perfil', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível carregar seu perfil', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
 
@@ -56,7 +58,7 @@ export default function PerfilScreen() {
     setNome(atual.full_name);
     setUsername(atual.username);
     setTelefone(atual.phone);
-  }, [session]);
+  }, [notificar, session]);
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
@@ -78,12 +80,12 @@ export default function PerfilScreen() {
     setSalvando(false);
 
     if (error) {
-      Alert.alert('Não foi possível salvar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível salvar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setEditando(false);
     await carregar();
-    Alert.alert('Perfil atualizado', 'Suas informações foram salvas.');
+    notificar({ titulo: 'Perfil atualizado', mensagem: 'Suas informações foram salvas.', tom: 'sucesso' });
   }
 
   return (

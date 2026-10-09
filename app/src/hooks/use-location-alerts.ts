@@ -1,16 +1,19 @@
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Alert, Vibration } from 'react-native';
+import { Vibration } from 'react-native';
 
+import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
 type Familia = { group_id: string; name: string };
 type NovoPing = { session_id: string; group_id: string };
+type SessaoCodigo = { qr_codes: { dependent_name: string } | { dependent_name: string }[] | null };
 
 /** Mantém o aviso de localização ativo enquanto o usuário navega por qualquer aba. */
 export function useLocationAlerts() {
   const { session } = useAuth();
+  const { notificar } = useToast();
   const sessoesAvisadas = useRef(new Set<string>());
 
   useEffect(() => {
@@ -31,20 +34,28 @@ export function useLocationAlerts() {
             const ping = payload.new as NovoPing;
             if (sessoesAvisadas.current.has(ping.session_id)) return;
             sessoesAvisadas.current.add(ping.session_id);
-            // Três pulsos longos: suficiente para chamar atenção sem manter a
-            // vibração presa caso o usuário já esteja olhando para a tela.
-            Vibration.vibrate([0, 700, 250, 700, 250, 700]);
-            Alert.alert(
-              'Nova localização recebida',
-              `Alguém escaneou um QR Code da ${familia.name} e compartilhou a posição.`,
-              [
-                { text: 'Depois', style: 'cancel' },
-                {
-                  text: 'Ver no mapa',
+            void (async () => {
+              const { data } = await supabase
+                .from('tracking_sessions')
+                .select('qr_codes(dependent_name)')
+                .eq('id', ping.session_id)
+                .maybeSingle<SessaoCodigo>();
+              const codigo = data?.qr_codes;
+              const nome = Array.isArray(codigo) ? codigo[0]?.dependent_name : codigo?.dependent_name;
+
+              // Três pulsos longos: suficiente para chamar atenção sem manter
+              // a vibração presa caso o usuário já esteja olhando para a tela.
+              Vibration.vibrate([0, 700, 250, 700, 250, 700]);
+              notificar({
+                titulo: 'Nova localização recebida',
+                mensagem: `${nome ?? 'Alguém'} compartilhou a posição pela ${familia.name}.`,
+                duracao: 7000,
+                acao: {
+                  rotulo: 'Ver no mapa',
                   onPress: () => router.push(`/configurar-familia?id=${familia.group_id}&aba=qrcodes` as Href),
                 },
-              ]
-            );
+              });
+            })();
           }
         );
       });
@@ -55,5 +66,5 @@ export function useLocationAlerts() {
       ativo = false;
       if (canal) void supabase.removeChannel(canal);
     };
-  }, [session]);
+  }, [notificar, session]);
 }

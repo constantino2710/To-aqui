@@ -37,12 +37,11 @@ export function SecondaryButton({
       accessibilityRole="button"
       disabled={inativo}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.botao,
         compacto ? styles.compacto : styles.normal,
         { borderColor: cor },
         inativo && styles.inativo,
-        pressed && !inativo && styles.pressionado,
       ]}>
       {loading ? (
         <ActivityIndicator color={cor} size="small" />
@@ -58,7 +57,7 @@ export function SecondaryButton({
 const styles = StyleSheet.create({
   botao: {
     borderWidth: 1.5,
-    borderRadius: Radii.large,
+    borderRadius: Radii.medium,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -76,8 +75,5 @@ const styles = StyleSheet.create({
   },
   inativo: {
     opacity: 0.4,
-  },
-  pressionado: {
-    opacity: 0.6,
   },
 });

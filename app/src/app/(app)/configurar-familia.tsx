@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { QRCode } from '@ttsalpha/qrcode/native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
@@ -14,12 +14,14 @@ import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
 import { TextField } from '@/components/text-field';
+import { useToast } from '@/components/toast';
 import { Palette, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
 import { finderUrl } from '@/lib/finder-url';
 import { openStreetMapUrl } from '@/lib/map-url';
+import { salvarImagemQr } from '@/lib/save-qr-image';
 import { supabase } from '@/lib/supabase';
 
 type AbaFamilia = 'membros' | 'qrcodes';
@@ -54,8 +56,13 @@ type PingLocalizacao = {
   received_at: string;
 };
 
+type QrCodeHandle = {
+  toDataURL: (callback: (base64: string) => void) => void;
+};
+
 export default function ConfigurarFamiliaScreen() {
   const theme = useTheme();
+  const { notificar } = useToast();
   const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ id?: string; aba?: AbaFamilia }>();
   const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -80,10 +87,14 @@ export default function ConfigurarFamiliaScreen() {
   const [alterandoQr, setAlterandoQr] = useState<string | null>(null);
   const [excluindoQr, setExcluindoQr] = useState<string | null>(null);
   const [compartilhandoLocalizacao, setCompartilhandoLocalizacao] = useState<string | null>(null);
+  const [encerrandoSessao, setEncerrandoSessao] = useState<string | null>(null);
   const [qrAberto, setQrAberto] = useState<QrCadastrado | null>(null);
   const [qrConfigurando, setQrConfigurando] = useState<QrCadastrado | null>(null);
   const [nomeQrEditando, setNomeQrEditando] = useState('');
   const [salvandoEdicaoQr, setSalvandoEdicaoQr] = useState(false);
+  const [qrRenderizado, setQrRenderizado] = useState<QrCodeHandle | null>(null);
+  const [baixandoQr, setBaixandoQr] = useState(false);
+  const [exibindoLinkQr, setExibindoLinkQr] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -124,7 +135,7 @@ export default function ConfigurarFamiliaScreen() {
       // temporária nele não pode esconder o nome, membros ou QR Codes.
       const error = grupos.error ?? pessoas.error ?? convidaveis.error ?? qrCodes.error;
       if (error) {
-        Alert.alert('Não foi possível carregar', traduzErroBanco(error.message));
+        notificar({ titulo: 'Não foi possível carregar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
         return;
       }
 
@@ -132,7 +143,7 @@ export default function ConfigurarFamiliaScreen() {
         (item) => item.group_id === groupId
       );
       if (!familia) {
-        Alert.alert('Família não encontrada', 'Você não participa mais desta família.');
+        notificar({ titulo: 'Família não encontrada', mensagem: 'Você não participa mais desta família.', tom: 'aviso' });
         router.replace('/');
         return;
       }
@@ -148,7 +159,7 @@ export default function ConfigurarFamiliaScreen() {
     const { data, error } = await supabase.rpc('list_friendships');
     setCarregando(false);
     if (error) {
-      Alert.alert('Não foi possível carregar seus amigos', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível carregar seus amigos', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setAmigos(
@@ -156,9 +167,12 @@ export default function ConfigurarFamiliaScreen() {
         .filter((item) => item.status === 'aceito')
         .map(({ profile_id, username, full_name }) => ({ profile_id, username, full_name }))
     );
-  }, [groupId]);
+  }, [groupId, notificar]);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => {
+    const temporizador = setTimeout(() => void carregar(), 0);
+    return () => clearTimeout(temporizador);
+  }, [carregar]);
 
   useEffect(() => {
     if (!groupId) return;
@@ -200,7 +214,7 @@ export default function ConfigurarFamiliaScreen() {
   async function salvar() {
     const nomeLimpo = nome.trim();
     if (!nomeLimpo) {
-      Alert.alert('Dê um nome à família', 'O nome ajuda todos a reconhecerem o grupo.');
+      notificar({ titulo: 'Dê um nome à família', mensagem: 'O nome ajuda todos a reconhecerem o grupo.', tom: 'aviso' });
       return;
     }
 
@@ -208,17 +222,20 @@ export default function ConfigurarFamiliaScreen() {
     if (groupId) {
       const { error } = await supabase.from('groups').update({ name: nomeLimpo }).eq('id', groupId);
       setSalvando(false);
-      if (error) return Alert.alert('Não foi possível salvar', traduzErroBanco(error.message));
+      if (error) {
+        notificar({ titulo: 'Não foi possível salvar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
+        return;
+      }
       setNomeSalvo(nomeLimpo);
       setEditandoNome(false);
-      Alert.alert('Família atualizada', 'O novo nome já está visível para todos.');
+      notificar({ titulo: 'Família atualizada', mensagem: 'O novo nome já está visível para todos.', tom: 'sucesso' });
       return;
     }
 
     const { data: novoGroupId, error } = await supabase.rpc('create_group', { p_name: nomeLimpo });
     if (error || !novoGroupId) {
       setSalvando(false);
-      Alert.alert('Não foi possível criar', traduzErroBanco(error?.message ?? 'Tente novamente.'));
+      notificar({ titulo: 'Não foi possível criar', mensagem: traduzErroBanco(error?.message ?? 'Tente novamente.'), tom: 'erro' });
       return;
     }
 
@@ -231,14 +248,14 @@ export default function ConfigurarFamiliaScreen() {
       const { error: erroConvites } = await supabase.from('group_invites').insert(convites);
       if (erroConvites) {
         setSalvando(false);
-        Alert.alert('Família criada', 'A família foi criada, mas alguns convites não foram enviados.');
+        notificar({ titulo: 'Família criada', mensagem: 'A família foi criada, mas alguns convites não foram enviados.', tom: 'aviso' });
         router.replace(`/configurar-familia?id=${novoGroupId}` as Href);
         return;
       }
     }
 
     setSalvando(false);
-    Alert.alert('Família criada', convites.length ? 'Os convites foram enviados.' : 'Agora você pode adicionar membros e QR Codes.');
+    notificar({ titulo: 'Família criada', mensagem: convites.length ? 'Os convites foram enviados.' : 'Agora você pode adicionar membros e QR Codes.', tom: 'sucesso' });
     router.replace(`/configurar-familia?id=${novoGroupId}` as Href);
   }
 
@@ -253,18 +270,18 @@ export default function ConfigurarFamiliaScreen() {
     setConvidando(null);
 
     if (error) {
-      Alert.alert('Não foi possível convidar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível convidar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setAmigos((atuais) => atuais.filter((item) => item.profile_id !== pessoa.profile_id));
-    Alert.alert('Convite enviado', `${pessoa.full_name} receberá o convite.`);
+    notificar({ titulo: 'Convite enviado', mensagem: `${pessoa.full_name} receberá o convite.`, tom: 'sucesso' });
   }
 
   async function cadastrarQr() {
     const nomeLimpo = nomeQr.trim();
     if (!groupId || !session) return;
     if (!nomeLimpo) {
-      Alert.alert('Dê um nome ao QR Code', 'Use o nome do filho, pet ou objeto protegido.');
+      notificar({ titulo: 'Dê um nome ao QR Code', mensagem: 'Use o nome do filho, pet ou objeto protegido.', tom: 'aviso' });
       return;
     }
 
@@ -277,13 +294,13 @@ export default function ConfigurarFamiliaScreen() {
     setCadastrandoQr(false);
 
     if (error) {
-      Alert.alert('Não foi possível cadastrar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível cadastrar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setNomeQr('');
     setMostrandoNovoQr(false);
     await carregar();
-    Alert.alert('QR Code cadastrado', `${nomeLimpo} já aparece na família.`);
+    notificar({ titulo: 'QR Code cadastrado', mensagem: `${nomeLimpo} já aparece na família.`, tom: 'sucesso' });
   }
 
   async function alternarQr(qr: QrCadastrado) {
@@ -295,7 +312,7 @@ export default function ConfigurarFamiliaScreen() {
     setAlterandoQr(null);
 
     if (error) {
-      Alert.alert('Não foi possível alterar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível alterar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setQrs((atuais) =>
@@ -314,7 +331,7 @@ export default function ConfigurarFamiliaScreen() {
     if (!qrConfigurando) return;
     const nomeLimpo = nomeQrEditando.trim();
     if (!nomeLimpo) {
-      Alert.alert('Dê um nome ao QR Code', 'Use um nome para identificá-lo na família.');
+      notificar({ titulo: 'Dê um nome ao QR Code', mensagem: 'Use um nome para identificá-lo na família.', tom: 'aviso' });
       return;
     }
     setSalvandoEdicaoQr(true);
@@ -324,7 +341,7 @@ export default function ConfigurarFamiliaScreen() {
       .eq('id', qrConfigurando.id);
     setSalvandoEdicaoQr(false);
     if (error) {
-      Alert.alert('Não foi possível editar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível editar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setQrs((atuais) => atuais.map((item) => item.id === qrConfigurando.id ? { ...item, dependent_name: nomeLimpo } : item));
@@ -347,7 +364,7 @@ export default function ConfigurarFamiliaScreen() {
     const { error } = await supabase.from('qr_codes').delete().eq('id', qr.id);
     setExcluindoQr(null);
     if (error) {
-      Alert.alert('Não foi possível excluir', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível excluir', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setQrAberto((aberto) => aberto?.id === qr.id ? null : aberto);
@@ -357,13 +374,38 @@ export default function ConfigurarFamiliaScreen() {
   }
 
   async function resolverSessao(sessaoId: string) {
+    setEncerrandoSessao(sessaoId);
     const { error } = await supabase.rpc('resolve_tracking_session', { p_session_id: sessaoId });
+    setEncerrandoSessao(null);
     if (error) {
-      Alert.alert('Não foi possível encerrar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível encerrar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setSessoes((atuais) => atuais.filter((item) => item.id !== sessaoId));
-    Alert.alert('Atendimento encerrado', 'O celular que compartilhou a localização receberá o aviso.');
+    notificar({ titulo: 'Atendimento encerrado', mensagem: 'O celular que compartilhou a localização receberá o aviso.', tom: 'sucesso' });
+  }
+
+  function confirmarDescarteSessao(sessaoId: string) {
+    Alert.alert(
+      'Descartar solicitação?',
+      'Essa solicitação vai sair da família e o rastreamento será encerrado.',
+      [
+        { text: 'Voltar', style: 'cancel' },
+        { text: 'Descartar', style: 'destructive', onPress: () => void descartarSessao(sessaoId) },
+      ],
+    );
+  }
+
+  async function descartarSessao(sessaoId: string) {
+    setEncerrandoSessao(sessaoId);
+    const { error } = await supabase.rpc('resolve_tracking_session', { p_session_id: sessaoId });
+    setEncerrandoSessao(null);
+    if (error) {
+      notificar({ titulo: 'Não foi possível descartar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
+      return;
+    }
+    setSessoes((atuais) => atuais.filter((item) => item.id !== sessaoId));
+    notificar({ titulo: 'Solicitação descartada', mensagem: 'Ela não aparecerá mais na lista de localizações.', tom: 'sucesso' });
   }
 
   async function compartilharLocalizacao(sessaoId: string) {
@@ -371,7 +413,7 @@ export default function ConfigurarFamiliaScreen() {
     const permissao = await Location.requestForegroundPermissionsAsync();
     if (!permissao.granted) {
       setCompartilhandoLocalizacao(null);
-      Alert.alert('Localização não permitida', 'Autorize a localização para que a pessoa que encontrou o QR possa ver onde você está.');
+      notificar({ titulo: 'Localização não permitida', mensagem: 'Autorize a localização para que a pessoa que encontrou o QR possa ver onde você está.', tom: 'aviso' });
       return;
     }
 
@@ -385,14 +427,66 @@ export default function ConfigurarFamiliaScreen() {
     });
     setCompartilhandoLocalizacao(null);
     if (error) {
-      Alert.alert('Não foi possível compartilhar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível compartilhar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     await carregar();
-    Alert.alert('Localização compartilhada', 'A pessoa que escaneou o QR agora vê sua posição no mapa desta sessão.');
+    notificar({ titulo: 'Localização compartilhada', mensagem: 'A pessoa que escaneou o QR agora vê sua posição no mapa desta sessão.', tom: 'sucesso' });
+  }
+
+  async function baixarImagemQr() {
+    if (!qrAberto || !qrRenderizado) return;
+    setBaixandoQr(true);
+
+    try {
+      const base64 = await new Promise<string>((resolve) => qrRenderizado.toDataURL(resolve));
+      const nomeSeguro = qrAberto.dependent_name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase() || 'qr-code';
+      const resultado = await salvarImagemQr(base64, `found-${nomeSeguro}.png`);
+
+      if (resultado === 'permissao-negada') {
+        notificar({
+          titulo: 'Permissão necessária',
+          mensagem: 'Autorize o acesso às fotos para salvar a imagem do QR Code.',
+          tom: 'aviso',
+        });
+        return;
+      }
+
+      notificar({
+        titulo: 'QR Code salvo',
+        mensagem: 'A imagem foi adicionada à sua galeria.',
+        tom: 'sucesso',
+      });
+    } catch {
+      notificar({
+        titulo: 'Não foi possível salvar',
+        mensagem: 'Tente novamente com o QR Code aberto.',
+        tom: 'erro',
+      });
+    } finally {
+      setBaixandoQr(false);
+    }
+  }
+
+  function abrirQr(qr: QrCadastrado) {
+    setExibindoLinkQr(false);
+    setQrRenderizado(null);
+    setQrAberto(qr);
+  }
+
+  function fecharQr() {
+    setQrAberto(null);
+    setExibindoLinkQr(false);
+    setQrRenderizado(null);
   }
 
   const podeEditar = !groupId || papel === 'chefe';
+  const tamanhoQr = Math.min(width - 128, 276);
 
   function cancelarEdicaoNome() {
     setNome(nomeSalvo);
@@ -490,9 +584,17 @@ export default function ConfigurarFamiliaScreen() {
                     )}
                   </>
                 ) : (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    A pessoa autorizou o envio. Aguardando a primeira posição do GPS…
-                  </ThemedText>
+                  <>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Ainda não recebemos a primeira posição. Se o envio falhou, você pode descartar esta solicitação.
+                    </ThemedText>
+                    <SecondaryButton
+                      label="Descartar solicitação"
+                      tom="perigo"
+                      loading={encerrandoSessao === sessao.id}
+                      onPress={() => confirmarDescarteSessao(sessao.id)}
+                    />
+                  </>
                 )}
               </Card>
             );
@@ -541,7 +643,7 @@ export default function ConfigurarFamiliaScreen() {
             qrs.map((qr) => (
               <Card
                 key={qr.id}
-                onPress={() => setQrAberto(qr)}>
+                onPress={() => abrirQr(qr)}>
                 <View style={styles.qrLinha}>
                   <View style={[styles.qrIcone, { backgroundColor: theme.backgroundSelected }]}>
                     <Ionicons name="qr-code" size={26} color={theme.brand} />
@@ -562,9 +664,9 @@ export default function ConfigurarFamiliaScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Configurar QR Code de ${qr.dependent_name}`}
                     onPress={() => abrirConfiguracaoQr(qr)}
-                    style={({ pressed }) => [
+                    style={[
                       styles.botaoConfigurarQr,
-                      { backgroundColor: theme.backgroundSelected, opacity: pressed ? 0.72 : 1 },
+                      { backgroundColor: theme.backgroundSelected },
                     ]}>
                     <Ionicons name="pencil-outline" size={20} color={theme.brand} />
                   </Pressable>
@@ -580,56 +682,90 @@ export default function ConfigurarFamiliaScreen() {
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setQrAberto(null)}>
-        <View style={[styles.modalFundo, { backgroundColor: theme.overlay }]}>
-          <View style={[styles.modalConteudo, { backgroundColor: theme.backgroundElement }]}>
+        onRequestClose={fecharQr}>
+        <Pressable
+          accessible={false}
+          onPress={fecharQr}
+          style={[styles.modalFundo, { backgroundColor: theme.overlay }]}>
+          <Pressable
+            onPress={(evento) => evento.stopPropagation()}
+            style={[styles.modalConteudo, { backgroundColor: theme.backgroundElement }]}>
             <View style={styles.modalCabecalho}>
               <View style={styles.modalTitulo}>
                 <ThemedText type="subtitle" numberOfLines={1}>
                   {qrAberto?.dependent_name}
                 </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Pronto para escanear
-                </ThemedText>
               </View>
-              <BotaoIcone icone="close" label="Fechar" onPress={() => setQrAberto(null)} />
-            </View>
-
-            <View style={[styles.imagemFundo, { backgroundColor: theme.backgroundSelected }]}> 
-              {qrAberto && (
-                <QRCode
-                  value={finderUrl(qrAberto.token)}
-                  size={Math.min(width - 96, 320)}
-                  // Contraste e margem silenciosa ajudam câmeras a reconhecer
-                  // a imagem, inclusive quando ela é exibida em outra tela.
-                  color={Palette.charcoal}
-                  backgroundColor={Palette.white}
-                  quietZone={20}
-                  ecl="H"
+              <View style={styles.modalAcoes}>
+                <BotaoIcone
+                  icone="download-outline"
+                  label="Baixar imagem do QR Code"
+                  destaque
+                  loading={baixandoQr}
+                  onPress={() => void baixarImagemQr()}
                 />
-              )}
+                <BotaoIcone icone="close" label="Fechar" onPress={fecharQr} />
+              </View>
             </View>
 
-            {qrAberto && (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado} selectable>
-                {finderUrl(qrAberto.token)}
-              </ThemedText>
-            )}
+            <Pressable
+              accessibilityRole={exibindoLinkQr ? 'link' : 'button'}
+              accessibilityLabel={exibindoLinkQr ? 'Abrir página deste QR Code' : 'Mostrar link deste QR Code'}
+              onPress={() => {
+                if (!qrAberto) return;
+                if (exibindoLinkQr) {
+                  void Linking.openURL(finderUrl(qrAberto.token));
+                  return;
+                }
+                setExibindoLinkQr(true);
+              }}
+              style={[
+                styles.imagemFundo,
+                {
+                  backgroundColor: Palette.white,
+                  height: tamanhoQr + 40,
+                },
+              ]}>
+              <View style={exibindoLinkQr ? styles.qrDesmaiado : undefined} pointerEvents="none">
+                {qrAberto && (
+                  <QRCode
+                    ref={(referencia) => setQrRenderizado(referencia as QrCodeHandle | null)}
+                    value={finderUrl(qrAberto.token)}
+                    size={tamanhoQr}
+                    margin={4}
+                    dotStyle="circle"
+                    dotColor={Palette.denim700}
+                    backgroundColor={Palette.white}
+                    corner={{
+                      square: { style: 'extra-rounded', color: Palette.denim700 },
+                      dot: { style: 'circle', color: Palette.denim700 },
+                    }}
+                    logo={{
+                      src: require('@/assets/images/found-logo-v2.png'),
+                      size: 0.52,
+                      margin: 1,
+                      hideDots: true,
+                      radius: 0.18,
+                    }}
+                    ariaLabel={`QR Code de ${qrAberto.dependent_name}`}
+                  />
+                )}
+              </View>
+              {qrAberto && exibindoLinkQr && (
+                <View style={styles.linkSobreQr} pointerEvents="none">
+                  <Ionicons name="open-outline" size={24} color={theme.brand} />
+                  <ThemedText type="smallBold" style={[styles.textoCentralizado, { color: theme.brand }]}>
+                    Abrir link
+                  </ThemedText>
+                </View>
+              )}
+            </Pressable>
 
             <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado}>
-              Ao escanear, abre o site público para autorizar o envio da localização.
+              Toque no QR para abrir o link.
             </ThemedText>
-
-            {qrAberto && (
-              <SecondaryButton
-                label="Abrir link de teste"
-                tom="marca"
-                onPress={() => void Linking.openURL(finderUrl(qrAberto.token))}
-              />
-            )}
-            <PrimaryButton label="Fechar" onPress={() => setQrAberto(null)} />
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -682,10 +818,11 @@ export default function ConfigurarFamiliaScreen() {
   );
 }
 
-function BotaoIcone({ icone, label, destaque = false, onPress }: {
+function BotaoIcone({ icone, label, destaque = false, loading = false, onPress }: {
   icone: keyof typeof Ionicons.glyphMap;
   label: string;
   destaque?: boolean;
+  loading?: boolean;
   onPress: () => void;
 }) {
   const theme = useTheme();
@@ -693,15 +830,20 @@ function BotaoIcone({ icone, label, destaque = false, onPress }: {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: loading, busy: loading }}
+      disabled={loading}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.botaoIcone,
         {
           backgroundColor: destaque ? theme.brand : theme.backgroundSelected,
-          opacity: pressed ? 0.72 : 1,
         },
       ]}>
-      <Ionicons name={icone} size={21} color={destaque ? theme.onBrand : theme.brand} />
+      {loading ? (
+        <ActivityIndicator size="small" color={destaque ? theme.onBrand : theme.brand} />
+      ) : (
+        <Ionicons name={icone} size={21} color={destaque ? theme.onBrand : theme.brand} />
+      )}
     </Pressable>
   );
 }
@@ -816,13 +958,27 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   modalTitulo: { flex: 1, gap: Spacing.half },
+  modalAcoes: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   imagemFundo: {
     width: '100%',
-    aspectRatio: 1,
     borderRadius: Radii.large,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.four,
+    padding: Spacing.three,
+    overflow: 'hidden',
+  },
+  qrDesmaiado: { opacity: 0.12 },
+  linkSobreQr: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: Spacing.four,
+    right: Spacing.four,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radii.large,
   },
   textoCentralizado: { textAlign: 'center' },
 });

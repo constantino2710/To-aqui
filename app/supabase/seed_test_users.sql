@@ -1,5 +1,5 @@
 -- =============================================================================
--- Usuários de teste — To Aqui
+-- Usuários de teste — Found
 -- =============================================================================
 -- Cria usuários JÁ CONFIRMADOS (dá para logar no app) e mostra o friend_code
 -- de cada um no final.

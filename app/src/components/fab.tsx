@@ -1,10 +1,9 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
-import { type ComponentProps, useContext } from 'react';
+import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Radii, Spacing } from '@/constants/theme';
+import { BottomTabInset, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type FabProps = {
@@ -25,22 +24,22 @@ export function Fab({ onPress, accessibilityLabel, icone = 'plus-thick', semBarr
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  // Altura real da barra de abas, medida pelo navigator (inclui a área segura).
-  const alturaBarra = useContext(BottomTabBarHeightContext);
+  // A barra de abas é personalizada, então o contexto de altura do navigator
+  // não é sempre preenchido. Reservamos a área dela explicitamente para o
+  // botão não ficar escondido atrás da navegação inferior.
   const bottom =
-    semBarraDeAbas || alturaBarra == null
+    semBarraDeAbas
       ? insets.bottom + Spacing.three
-      : alturaBarra - Spacing.four;
+      : Math.max(BottomTabInset, insets.bottom + 76) + Spacing.three;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.fab,
         { backgroundColor: theme.brand, shadowColor: theme.shadow, right: Spacing.four, bottom },
-        pressed && styles.pressionado,
       ]}>
       <MaterialCommunityIcons name={icone} size={32} color={theme.onBrand} />
     </Pressable>
@@ -50,18 +49,15 @@ export function Fab({ onPress, accessibilityLabel, icone = 'plus-thick', semBarr
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    width: 60,
-    height: 60,
+    width: 56,
+    height: 56,
     borderRadius: Radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  pressionado: {
-    opacity: 0.9,
-    transform: [{ scale: 0.96 }],
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 10,
   },
 });

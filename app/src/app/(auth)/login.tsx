@@ -1,4 +1,4 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -11,13 +11,11 @@ import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radii, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroAuth } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
-  const theme = useTheme();
   const { confirmError } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -52,13 +50,16 @@ export default function LoginScreen() {
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.content}>
               <View style={styles.cabecalho}>
-                <View style={[styles.marca, { backgroundColor: theme.brand }]}>
-                  <Ionicons name="location" size={30} color={theme.onBrand} />
-                </View>
+                <Image
+                  source={require('@/assets/images/found-logo-v2.png')}
+                  style={styles.marca}
+                  contentFit="contain"
+                  accessibilityLabel="Found"
+                />
                 <View style={styles.titulos}>
                   <ThemedText type="subtitle">Bem-vindo de volta</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Entre para acompanhar sua família no To Aqui.
+                    Entre para acompanhar sua família no Found.
                   </ThemedText>
                 </View>
               </View>
@@ -142,11 +143,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   marca: {
-    width: 56,
-    height: 56,
-    borderRadius: Radii.large,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 64,
+    height: 64,
   },
   titulos: {
     gap: Spacing.one,

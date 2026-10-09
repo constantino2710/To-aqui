@@ -1,30 +1,34 @@
 import { Platform } from 'react-native';
 
 /**
- * Paleta-base Emerald. Mudanças de identidade visual começam neste único objeto.
+ * Paleta-base denim sobre neutros levemente quentes. Verde é reservado para sucesso.
  * Os valores aqui espelham o contrato de tokens em `global.css` (variáveis HSL),
  * que também é usado pelo site em `finder-site/src/styles.css`. Mantenha os dois
  * lados em sincronia ao ajustar a identidade.
  */
 export const Palette = {
   white: '#FFFFFF',
-  ink: '#10281F',
+  ink: '#24262D',
 
-  emerald700: '#047857',
-  emerald600: '#059669',
+  denim700: '#405078',
+  denim500: '#6B7FB6',
+  denim300: '#AFC1F5',
+
+  // Verde semântico: confirmações, estado seguro e localização positiva.
+  emerald700: '#2E7D5B',
   emerald500: '#10B981',
-  emerald400: '#34D399',
-  emerald200: '#A7F3D0',
-  emerald100: '#D1FAE5',
-  mint50: '#F0FDF4',
+  emerald400: '#57C28D',
 
-  gray700: '#56766A',
-  gray300: '#9AB6A8',
-  gray200: '#D9E8E0',
+  gray700: '#6B6F79',
+  gray300: '#A3A6AE',
+  gray200: '#DEDCD7',
+  gray100: '#F0EEEA',
+  gray50: '#F7F5F2',
 
-  forest: '#0B1F17',
-  forestSoft: '#122B21',
-  forestRaised: '#1E3E32',
+  night: '#111318',
+  nightSoft: '#1A1D24',
+  nightRaised: '#252933',
+  nightBorder: '#30343E',
 
   rose: '#FB7185',
   orange: '#FB923C',
@@ -34,21 +38,21 @@ export const Palette = {
   lime: '#84CC16',
   red: '#E5484D',
 
-  charcoal: '#10281F',
-  shadow: 'rgba(6, 78, 59, 0.16)',
-  shadowDark: 'rgba(0, 0, 0, 0.42)',
-  overlay: 'rgba(6, 24, 18, 0.55)',
+  charcoal: '#24262D',
+  shadow: 'rgba(36, 38, 45, 0.08)',
+  shadowDark: 'rgba(0, 0, 0, 0.28)',
+  overlay: 'rgba(10, 11, 14, 0.66)',
 } as const;
 
 /** Tokens semânticos consumidos pelos componentes. */
 export const Colors = {
   light: {
     text: Palette.ink,
-    background: Palette.mint50,
-    backgroundElement: Palette.white,
-    backgroundSelected: Palette.emerald100,
+    background: Palette.gray50,
+    backgroundElement: '#FFFEFC',
+    backgroundSelected: '#E9E7E3',
     textSecondary: Palette.gray700,
-    brand: Palette.emerald700,
+    brand: Palette.denim700,
     onBrand: Palette.white,
     danger: Palette.red,
     success: Palette.emerald700,
@@ -61,15 +65,15 @@ export const Colors = {
   },
   dark: {
     text: Palette.white,
-    background: Palette.forest,
-    backgroundElement: Palette.forestSoft,
-    backgroundSelected: Palette.forestRaised,
+    background: Palette.night,
+    backgroundElement: Palette.nightSoft,
+    backgroundSelected: Palette.nightRaised,
     textSecondary: Palette.gray300,
-    brand: Palette.emerald400,
-    onBrand: Palette.forest,
+    brand: Palette.denim300,
+    onBrand: Palette.night,
     danger: '#FF6B70',
     success: Palette.emerald400,
-    border: Palette.forestRaised,
+    border: Palette.nightBorder,
     shadow: Palette.shadowDark,
     overlay: Palette.overlay,
     accentPink: Palette.rose,
@@ -82,9 +86,9 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 /** Cores de avatar: multi-hue que harmoniza com o verde da marca. */
 export const AvatarColors = [
-  Palette.emerald500,
+  Palette.denim500,
   Palette.teal,
-  Palette.blue,
+  Palette.emerald500,
   Palette.lime,
   Palette.amber,
   Palette.orange,
@@ -123,10 +127,10 @@ export const Spacing = {
 } as const;
 
 export const Radii = {
-  small: 10,
-  medium: 14,
-  large: 18,
-  extraLarge: 24,
+  small: 8,
+  medium: 11,
+  large: 15,
+  extraLarge: 20,
   pill: 999,
 } as const;
 

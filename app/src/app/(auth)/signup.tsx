@@ -43,18 +43,20 @@ export default function SignupScreen() {
   // entender qual campo estava errado.
   useEffect(() => {
     const valor = username.trim();
+    let cancelado = false;
 
     if (!valor) {
-      setStatusUsername('vazio');
-      return;
+      const temporizador = setTimeout(() => setStatusUsername('vazio'), 0);
+      return () => clearTimeout(temporizador);
     }
     if (!USERNAME_REGEX.test(valor)) {
-      setStatusUsername('invalido');
-      return;
+      const temporizador = setTimeout(() => setStatusUsername('invalido'), 0);
+      return () => clearTimeout(temporizador);
     }
 
-    setStatusUsername('checando');
-    let cancelado = false;
+    const indicador = setTimeout(() => {
+      if (!cancelado) setStatusUsername('checando');
+    }, 0);
 
     // Espera a pessoa parar de digitar: sem isso é uma ida ao servidor por tecla.
     const temporizador = setTimeout(async () => {
@@ -70,6 +72,7 @@ export default function SignupScreen() {
 
     return () => {
       cancelado = true;
+      clearTimeout(indicador);
       clearTimeout(temporizador);
     };
   }, [username]);

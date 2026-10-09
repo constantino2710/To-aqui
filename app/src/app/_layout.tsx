@@ -1,10 +1,10 @@
 import '../../global.css';
 
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemePreferenceProvider, useThemePreference } from '@/lib/theme-preference';
 
@@ -36,10 +36,12 @@ function RootContent() {
 
   return (
     <ThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <AnimatedSplashOverlay />
-        <RootNavigator />
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AnimatedSplashOverlay />
+          <RootNavigator />
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

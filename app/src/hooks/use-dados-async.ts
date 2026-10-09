@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type EstadoAsync<T> = {
   dados: T | null;
@@ -26,7 +26,9 @@ export function useDadosAsync<T>(carregar: () => Promise<T>): EstadoAsync<T> {
   // A função de carregar costuma ser recriada a cada render. Guardar numa ref
   // evita que isso vire um laço de recarregamento infinito.
   const carregarRef = useRef(carregar);
-  carregarRef.current = carregar;
+  useEffect(() => {
+    carregarRef.current = carregar;
+  }, [carregar]);
 
   const executar = useCallback(async (puxouParaAtualizar: boolean) => {
     if (puxouParaAtualizar) setAtualizando(true);

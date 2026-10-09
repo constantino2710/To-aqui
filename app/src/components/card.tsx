@@ -43,10 +43,8 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.two,
     borderWidth: StyleSheet.hairlineWidth,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 2,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   pressionado: {
     opacity: 0.7,

@@ -3,40 +3,40 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   To Aqui — contrato de cores Emerald (estilo shadcn, variáveis HSL).
+   Found — contrato denim + neutros quentes (variáveis HSL).
    Mantenha estes tokens iguais aos do site (finder-site/src/styles.css) e
    espelhados em src/constants/theme.ts. Claro e escuro seguem o tema do
    sistema automaticamente (darkMode: 'media').
    --------------------------------------------------------------------------- */
 @layer base {
   :root {
-    --background: 138 76% 97%;
-    --foreground: 158 42% 11%;
+    --background: 36 24% 96%;
+    --foreground: 227 11% 16%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 158 42% 11%;
+    --card: 40 100% 99%;
+    --card-foreground: 227 11% 16%;
 
-    --primary: 163 94% 24%;
+    --primary: 223 30% 36%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 149 72% 92%;
-    --secondary-foreground: 163 88% 20%;
+    --secondary: 40 12% 90%;
+    --secondary-foreground: 225 21% 26%;
 
-    --muted: 152 60% 95%;
-    --muted-foreground: 155 16% 40%;
+    --muted: 40 17% 93%;
+    --muted-foreground: 223 6% 45%;
 
-    --accent: 149 72% 92%;
-    --accent-foreground: 163 88% 20%;
+    --accent: 26 33% 91%;
+    --accent-foreground: 18 35% 31%;
 
     --destructive: 358 70% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 163 94% 24%;
+    --success: 154 46% 34%;
     --success-foreground: 0 0% 100%;
 
-    --border: 150 24% 88%;
-    --input: 150 24% 88%;
-    --ring: 160 84% 39%;
+    --border: 43 10% 86%;
+    --input: 43 10% 86%;
+    --ring: 224 34% 57%;
 
     --radius: 1rem;
 
@@ -48,33 +48,33 @@
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: 158 46% 8%;
-      --foreground: 150 40% 96%;
+      --background: 223 17% 8%;
+      --foreground: 43 24% 94%;
 
-      --card: 157 40% 12%;
-      --card-foreground: 150 40% 96%;
+      --card: 222 16% 12%;
+      --card-foreground: 43 24% 94%;
 
-      --primary: 158 64% 52%;
-      --primary-foreground: 160 84% 9%;
+      --primary: 225 78% 82%;
+      --primary-foreground: 224 31% 12%;
 
-      --secondary: 157 34% 18%;
-      --secondary-foreground: 150 50% 92%;
+      --secondary: 223 16% 17%;
+      --secondary-foreground: 228 12% 92%;
 
-      --muted: 157 30% 16%;
-      --muted-foreground: 150 16% 66%;
+      --muted: 224 15% 15%;
+      --muted-foreground: 224 6% 66%;
 
-      --accent: 157 34% 20%;
-      --accent-foreground: 150 50% 92%;
+      --accent: 15 13% 18%;
+      --accent-foreground: 22 64% 87%;
 
       --destructive: 358 62% 60%;
       --destructive-foreground: 0 0% 100%;
 
-      --success: 158 64% 52%;
-      --success-foreground: 160 84% 9%;
+      --success: 150 47% 55%;
+      --success-foreground: 223 17% 8%;
 
-      --border: 150 26% 20%;
-      --input: 150 26% 20%;
-      --ring: 158 64% 52%;
+      --border: 223 13% 22%;
+      --input: 223 13% 22%;
+      --ring: 225 78% 82%;
     }
   }
 }

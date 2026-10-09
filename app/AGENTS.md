@@ -8,9 +8,10 @@ O padrão visual completo está em [`../DESIGN.md`](../DESIGN.md), válido para 
 app e o site. **Siga-o sempre; só troque com pedido explícito do usuário.**
 Resumo para este app:
 
-- **Identidade Emerald (verde)**, tema claro e escuro acompanhando o sistema.
-  Visual moderno e limpo: cartões bem arredondados, sombras discretas, ícones
-  simples e bastante espaço em branco.
+- **Identidade azul-denim sobre neutros levemente quentes**, tema claro e escuro acompanhando o sistema.
+  Verde é reservado para sucesso e localização.
+  Visual sóbrio e humano: cantos moderados, superfícies mais planas, sombras
+  raras, ícones simples e bastante espaço em branco.
 - **Componentes:** [react-native-reusables](https://reactnativereusables.com)
   sobre **NativeWind** (Tailwind no React Native). Novos componentes entram em
   `src/components/ui/`, estilizados com classes NativeWind. O shadcn/ui não roda

@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { PersonRow } from '@/components/person-row';
@@ -9,6 +9,7 @@ import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
 import { TextField } from '@/components/text-field';
+import { useToast } from '@/components/toast';
 import { Spacing } from '@/constants/theme';
 import { traduzErroBanco } from '@/lib/db-errors';
 import { supabase } from '@/lib/supabase';
@@ -32,6 +33,7 @@ type ResultadoBusca = {
 };
 
 export default function ComunidadeScreen() {
+  const { notificar } = useToast();
   const [amizades, setAmizades] = useState<Amizade[]>([]);
   const [busca, setBusca] = useState('');
   const [resultados, setResultados] = useState<ResultadoBusca[]>([]);
@@ -45,18 +47,18 @@ export default function ComunidadeScreen() {
     setCarregando(false);
 
     if (error) {
-      Alert.alert('Não foi possível carregar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível carregar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setAmizades((data ?? []) as Amizade[]);
-  }, []);
+  }, [notificar]);
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
   async function pesquisar() {
     const termo = busca.trim();
     if (termo.length < 3) {
-      Alert.alert('Digite mais um pouco', 'Use ao menos 3 caracteres do username ou a tag completa.');
+      notificar({ titulo: 'Digite mais um pouco', mensagem: 'Use ao menos 3 caracteres do username ou a tag completa.', tom: 'aviso' });
       return;
     }
 
@@ -65,7 +67,7 @@ export default function ComunidadeScreen() {
     setBuscando(false);
 
     if (error) {
-      Alert.alert('Busca indisponível', traduzErroBanco(error.message));
+      notificar({ titulo: 'Busca indisponível', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     setResultados((data ?? []) as ResultadoBusca[]);
@@ -77,10 +79,11 @@ export default function ComunidadeScreen() {
     setProcessando(null);
 
     if (error) {
-      Alert.alert('Não foi possível adicionar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível adicionar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     await Promise.all([carregar(), pesquisar()]);
+    notificar({ titulo: 'Solicitação enviada', mensagem: `${pessoa.full_name} receberá seu pedido.`, tom: 'sucesso' });
   }
 
   async function responder(friendshipId: string, aceitar: boolean) {
@@ -92,10 +95,11 @@ export default function ComunidadeScreen() {
     setProcessando(null);
 
     if (error) {
-      Alert.alert('Não foi possível responder', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível responder', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     await carregar();
+    notificar({ titulo: aceitar ? 'Amizade aceita' : 'Solicitação recusada', tom: aceitar ? 'sucesso' : 'info' });
   }
 
   const pedidos = amizades.filter((item) => item.status === 'pendente');

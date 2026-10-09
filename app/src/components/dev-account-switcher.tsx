@@ -57,6 +57,15 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
 
   const contasTeste = getDevAccounts();
 
+  function nomeConta(a: SavedAccount) {
+    const contaTeste = contasTeste.find((conta) => conta.email.toLowerCase() === a.email.toLowerCase());
+    return a.fullName ?? contaTeste?.label ?? a.username ?? a.email;
+  }
+
+  function identificadorConta(a: SavedAccount) {
+    return a.username ? `@${a.username}` : a.email;
+  }
+
   function ehAtiva(a: SavedAccount) {
     return !!currentEmail && a.email.toLowerCase() === currentEmail.toLowerCase();
   }
@@ -137,10 +146,10 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
       <Pressable
         accessibilityRole="button"
         onPress={() => setAberto(true)}
-        style={({ pressed }) => [styles.trigger, { borderColor: theme.border }, pressed && styles.pressionado]}>
+        style={[styles.trigger, { borderColor: theme.border }]}>
         {contaAtual ? (
           <Avatar
-            nome={contaAtual.fullName ?? contaAtual.username ?? contaAtual.email}
+            nome={nomeConta(contaAtual)}
             semente={contaAtual.userId}
             tamanho={32}
           />
@@ -149,11 +158,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
         )}
         <View style={styles.triggerTextos}>
           <ThemedText type="smallBold">
-            {contaAtual
-              ? contaAtual.username
-                ? `@${contaAtual.username}`
-                : contaAtual.email
-              : label}
+            {contaAtual ? nomeConta(contaAtual) : label}
           </ThemedText>
           {contaAtual && (
             <ThemedText type="small" themeColor="textSecondary">
@@ -192,21 +197,18 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                       key={a.userId}
                       disabled={ocupado !== null || semeando}
                       onPress={() => trocar(a)}
-                      style={({ pressed }) => [
+                      style={[
                         styles.item,
                         {
                           borderColor: ativa ? theme.brand : theme.border,
                           backgroundColor: ativa ? theme.backgroundSelected : 'transparent',
                         },
-                        pressed && styles.pressionado,
                       ]}>
-                      <Avatar nome={a.fullName ?? a.username ?? a.email} semente={a.userId} tamanho={42} />
+                      <Avatar nome={nomeConta(a)} semente={a.userId} tamanho={42} />
                       <View style={styles.itemTextos}>
-                        <ThemedText type="smallBold">
-                          {a.username ? `@${a.username}` : a.email}
-                        </ThemedText>
+                        <ThemedText type="smallBold">{nomeConta(a)}</ThemedText>
                         <ThemedText type="small" themeColor="textSecondary">
-                          {a.fullName ?? a.email}
+                          {identificadorConta(a)}
                         </ThemedText>
                       </View>
                       {ocupado === a.userId ? (
@@ -231,7 +233,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                 accessibilityRole="button"
                 disabled={ocupado !== null || semeando}
                 onPress={adicionar}
-                style={({ pressed }) => [styles.acao, pressed && styles.pressionado]}>
+                style={styles.acao}>
                 <Ionicons name="add-circle-outline" size={20} color={theme.brand} />
                 <ThemedText type="smallBold" style={{ color: theme.brand }}>
                   Adicionar outra conta
@@ -243,7 +245,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                   accessibilityRole="button"
                   disabled={semeando || ocupado !== null}
                   onPress={semearTeste}
-                  style={({ pressed }) => [styles.acao, pressed && styles.pressionado]}>
+                  style={styles.acao}>
                   {semeando ? (
                     <ActivityIndicator color={theme.textSecondary} />
                   ) : (
@@ -276,14 +278,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: Spacing.half,
   },
-  pressionado: {
-    opacity: 0.7,
-  },
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
   },
   folha: {
+    width: '100%',
     borderTopLeftRadius: Radii.extraLarge,
     borderTopRightRadius: Radii.extraLarge,
     padding: Spacing.four,
@@ -300,9 +300,12 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   lista: {
+    width: '100%',
     gap: Spacing.two,
   },
   item: {
+    width: '100%',
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
@@ -312,6 +315,7 @@ const styles = StyleSheet.create({
   },
   itemTextos: {
     flex: 1,
+    minWidth: 0,
     gap: Spacing.half,
   },
   acao: {

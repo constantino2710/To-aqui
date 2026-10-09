@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
@@ -10,6 +10,7 @@ import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
 import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
+import { useToast } from '@/components/toast';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { traduzErroBanco } from '@/lib/db-errors';
@@ -30,6 +31,7 @@ type ConviteFamilia = {
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const { notificar } = useToast();
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [convites, setConvites] = useState<ConviteFamilia[]>([]);
   const [busca, setBusca] = useState('');
@@ -47,13 +49,13 @@ export default function HomeScreen() {
 
     const error = grupos.error ?? convitesPendentes.error;
     if (error) {
-      Alert.alert('Não foi possível carregar', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível carregar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
 
     setFamilias((grupos.data ?? []) as Familia[]);
     setConvites((convitesPendentes.data ?? []) as ConviteFamilia[]);
-  }, []);
+  }, [notificar]);
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
@@ -75,10 +77,11 @@ export default function HomeScreen() {
     setRespondendo(null);
 
     if (error) {
-      Alert.alert('Não foi possível responder', traduzErroBanco(error.message));
+      notificar({ titulo: 'Não foi possível responder', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
     await carregar();
+    notificar({ titulo: aceitar ? 'Convite aceito' : 'Convite recusado', tom: aceitar ? 'sucesso' : 'info' });
   }
 
   const familiasVisiveis = termoBusca
@@ -120,10 +123,9 @@ export default function HomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Pesquisar famílias"
           onPress={pesquisarFamilias}
-          style={({ pressed }) => [
+          style={[
             styles.botaoBusca,
             { backgroundColor: theme.brand },
-            pressed && styles.botaoBuscaPressionado,
           ]}>
           <Ionicons name="search" size={22} color={theme.onBrand} />
         </Pressable>
@@ -210,7 +212,15 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  busca: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  // O campo começa e termina nas bordas úteis da tela, independente do recuo
+  // aplicado aos demais conteúdos da página.
+  busca: {
+    alignSelf: 'stretch',
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
   campoBusca: {
     flex: 1,
     height: 48,
@@ -226,7 +236,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  botaoBuscaPressionado: { opacity: 0.8 },
   lista: { gap: Spacing.two },
   linha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   icone: {
