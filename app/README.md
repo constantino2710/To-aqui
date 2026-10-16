@@ -1,98 +1,81 @@
-# Found
+# Aplicativo Found
 
-App em React Native (Expo) com autenticação por e-mail e senha via Supabase.
-
-Telas: login, cadastro e uma home que mostra o e-mail de quem está logado.
+Aplicativo Expo para responsáveis criarem famílias, cadastrarem QR Codes e acompanharem sessões de localização. O site público aberto pelo QR ainda exibe a marca To Aqui. A apresentação do projeto e o checklist de demonstração estão no [README principal](../README.md).
 
 ## Requisitos
 
-- **Node.js 20.19.4 ou superior** (exigência do React Native 0.81.5)
-- **Expo Go compatível com o SDK 54** no celular, ou um development build
-- Um projeto Supabase (a parte de banco é gratuita para começar)
+- Node.js compatível com a versão do Expo declarada em `package.json`.
+- Projeto Supabase configurado com as migrations de `supabase/migrations/` aplicadas.
+- Expo Go ou development build para abrir no celular.
 
-## Como rodar
-
-### 1. Instale as dependências
+## Configuração
 
 ```bash
 npm install
-```
-
-### 2. Configure as variáveis de ambiente
-
-```bash
 cp .env.example .env
 ```
 
-Abra o `.env` e preencha com os dados do seu projeto Supabase
-(**Dashboard → Project Settings → API Keys**):
+Configure no `.env`:
 
-| Variável | Onde encontrar |
+| Variável | Descrição |
 | --- | --- |
-| `EXPO_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | A chave que começa com `sb_publishable_` |
-| `SUPABASE_DB_PASSWORD` | **Project Settings → Database**. Opcional: só é usada por CLI/migrations, nunca pelo app |
+| `EXPO_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Chave pública do mesmo projeto |
+| `EXPO_PUBLIC_PUBLIC_SITE_URL` | URL HTTPS do `finder-site` publicado |
+| `SUPABASE_DB_PASSWORD` | Opcional; usada somente por ferramentas locais de banco, nunca pelo app |
 
-Sem as duas primeiras o app lança um erro explícito na inicialização, de propósito —
-é melhor do que falhar silenciosamente em toda requisição.
+O app usa a publishable key no cliente, protegida pelas permissões e políticas RLS do banco. Não use senha, secret key ou `service_role` em variáveis `EXPO_PUBLIC_*`.
 
-> **Sobre o prefixo `EXPO_PUBLIC_`:** ele faz a variável ser embutida no bundle do
-> app, ficando visível para qualquer pessoa que baixe o APK. Isso é o esperado para
-> a publishable key, que é pública por design e protegida por RLS. **Nunca** use esse
-> prefixo na senha do banco nem na secret key.
+Para confirmar contas por e-mail no Expo Go, adicione `exp://**` à lista de redirects autorizados no Supabase. Em build nativo, autorize `app://**`. Reinicie o Expo com `npx expo start --clear` depois de alterar o `.env`.
 
-### 3. Autorize os redirects no Supabase
-
-Este projeto usa confirmação de e-mail. Para o link do e-mail voltar ao app, vá em
-**Authentication → URL Configuration** e adicione em *Redirect URLs*:
-
-- `exp://**` — para o Expo Go em desenvolvimento
-- `app://**` — para builds nativos
-
-E em *Site URL*, use `app://auth/callback`.
-
-Se você pular este passo, a conta ainda é confirmada, mas o usuário não volta
-automaticamente para o app: precisará abrir o app e fazer login manualmente.
-
-### 4. Inicie
+## Executar
 
 ```bash
 npm run start
 ```
 
-Escaneie o QR code com o Expo Go.
+Leia o QR do Expo Go. Alternativamente, `npm run android`, `npm run ios` ou `npm run web` iniciam no alvo correspondente, desde que o ambiente esteja instalado.
 
-> Sempre que editar o `.env`, use `npx expo start --clear`. O Metro faz cache das
-> variáveis dentro do bundle e sem isso continua servindo os valores antigos.
+## Fluxo de localização
 
-## Estrutura
+1. O responsável cria/abre uma família e cadastra um QR Code; o banco gera o token do QR.
+2. O link do QR abre o site público. A função `scan_qr_code` cria uma sessão persistida e devolve uma credencial anônima para aquele navegador.
+3. Após consentimento e permissão do GPS, o `finder-site` grava posições através de `record_location_ping`.
+4. O app consulta as sessões ativas e posições do grupo. Supabase Realtime entrega posições e mudanças de estado, e o app só exibe dados do grupo autorizado.
+5. O responsável usa **Já encontramos** para encerrar. O navegador também pode encerrar pelo botão **Parar de compartilhar**.
 
+O navegador do achador não faz login e não recebe nome da família ou da pessoa protegida. O acesso é limitado ao token da sessão e às RPCs públicas de localização. A pessoa pode interromper o envio a qualquer momento.
+
+## Banco e segurança
+
+As migrations estão em `supabase/migrations/` e devem ser aplicadas em ordem ao mesmo projeto usado pelo app e pelo site. Para enviar migrations com Supabase CLI:
+
+```bash
+npx supabase link --project-ref SEU_PROJECT_REF
+npx supabase db push
 ```
-src/
-  app/                 rotas (expo-router, file-based)
-    _layout.tsx        tema + provider de sessão + Stack.Protected
-    (auth)/            login e cadastro (visível só sem sessão)
-    (app)/             home (visível só com sessão)
-  components/          UI reutilizável
-  constants/theme.ts   cores, espaçamentos e fontes
-  hooks/               hooks de tema
-  lib/
-    supabase.ts        cliente Supabase (PKCE + AsyncStorage)
-    auth.tsx           sessão, onAuthStateChange e deep link de confirmação
-    auth-errors.ts     tradução das mensagens de erro do Supabase
-```
 
-O redirecionamento entre logado e deslogado é feito por `Stack.Protected` no layout
-raiz. Nenhuma tela navega manualmente após login ou logout, então não existe caminho
-em que a sessão e a tela fiquem dessincronizadas.
+As tabelas de sessão e posição não permitem escrita direta pelo cliente; as funções RPC validam o token, status, consentimento e associação ao grupo. RLS limita a leitura de responsáveis aos grupos de que participam. A API anônima do achador não expõe dados pessoais da família.
+
+## Estrutura principal
+
+```text
+src/app/                 rotas Expo Router; (app) requer sessão
+src/app/(app)/            famílias, perfil, comunidade e QR
+src/lib/supabase.ts       cliente Supabase do app
+src/lib/auth.tsx          sessão e autenticação
+supabase/migrations/      esquema, políticas, funções e fluxo de localização
+```
 
 ## Scripts
 
-| Comando | O que faz |
+| Comando | Função |
 | --- | --- |
-| `npm run start` | Sobe o Metro e mostra o QR code |
-| `npm run android` | Abre em emulador/aparelho — requer o Android SDK instalado |
-| `npm run ios` | Abre no simulador iOS — só em macOS |
-| `npm run web` | Abre no navegador |
-| `npm run lint` | `expo lint` (o ESLint ainda não está configurado; ele se oferece para configurar) |
-| `npm run reset-project` | ⚠️ **Destrutivo.** Apaga `src/` e `scripts/` e recria um projeto em branco. Vestígio do template do Expo — não rode neste projeto |
+| `npm run start` | Inicia o Expo/Metro |
+| `npm run android` | Inicia para Android |
+| `npm run ios` | Inicia para iOS |
+| `npm run web` | Inicia para navegador |
+| `npm run lint` | Executa Expo lint |
+| `npx tsc --noEmit` | Verifica tipos TypeScript |
+
+`npm run reset-project` é um resquício do template Expo e apaga arquivos do projeto. Não é necessário para executar o app.
