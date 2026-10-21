@@ -20,15 +20,15 @@ export const Palette = {
   emerald400: '#57C28D',
 
   gray700: '#6B6F79',
-  gray300: '#A3A6AE',
+  gray300: '#B7BAC2',
   gray200: '#DEDCD7',
   gray100: '#F0EEEA',
   gray50: '#F7F5F2',
 
-  night: '#111318',
-  nightSoft: '#1A1D24',
-  nightRaised: '#252933',
-  nightBorder: '#30343E',
+  night: '#1C1F26',
+  nightSoft: '#252932',
+  nightRaised: '#303441',
+  nightBorder: '#3B404F',
 
   rose: '#FB7185',
   orange: '#FB923C',

@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
 import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 
@@ -7,8 +7,8 @@ import { registrarPushDoAparelho } from '@/lib/push-notifications';
 
 type DadosNotificacao = { url?: unknown };
 
-function abrirDestino(notification: Notifications.Notification | undefined) {
-  const dados = notification?.request.content.data as DadosNotificacao | undefined;
+function abrirDestino(data: unknown) {
+  const dados = data as DadosNotificacao | undefined;
   if (typeof dados?.url === 'string') router.push(dados.url as Href);
 }
 
@@ -18,14 +18,19 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!session?.user.id) return;
+    // Expo Go (SDK 53+) removeu o push remoto no Android; carregar o módulo só
+    // fora do Expo Go evita o crash. Sem dev build o app roda normal, só sem push.
+    if (isRunningInExpoGo()) return;
+    const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+
     void registrarPushDoAparelho(session.user.id);
 
     const resposta = Notifications.addNotificationResponseReceivedListener((evento) => {
-      abrirDestino(evento.notification);
+      abrirDestino(evento.notification.request.content.data);
     });
 
     const ultima = Notifications.getLastNotificationResponse();
-    if (ultima?.notification) abrirDestino(ultima.notification);
+    if (ultima?.notification) abrirDestino(ultima.notification.request.content.data);
 
     return () => resposta.remove();
   }, [session?.user.id]);
