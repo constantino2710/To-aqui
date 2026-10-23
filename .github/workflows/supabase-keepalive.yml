@@ -1,0 +1,33 @@
+name: Supabase Keep-Alive
+
+# Mantém o projeto Supabase (plano free) ativo: ele pausa após 7 dias sem
+# atividade, então pingamos a API REST a cada 3 dias. Roda na infra do GitHub,
+# sem depender de nenhuma máquina local estar ligada.
+
+on:
+  schedule:
+    # A cada 3 dias às 06:00 UTC (dias 1, 4, 7, ... do mês). Gap máximo ~4 dias,
+    # bem abaixo dos 7 que disparam a pausa.
+    - cron: '0 6 */3 * *'
+  # Permite disparar na mão pelo botão "Run workflow" na aba Actions.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST (toca o Postgres)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+          echo "Supabase respondeu HTTP $code"
+          # 200 (lista, possivelmente vazia por RLS) = projeto acordado e ativo.
+          if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+            echo "::error::Ping falhou (HTTP $code) — projeto pode estar pausado ou a key expirou."
+            exit 1
+          fi
