@@ -16,18 +16,29 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase REST (toca o Postgres)
+      - name: Ping Supabase (mantém o projeto ativo)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" \
+          # 1) Atividade no banco: uma query real no Postgres via PostgREST.
+          #    profiles é protegida por RLS, então o anon leva 401/42501 — mas a
+          #    query CHEGA ao Postgres mesmo assim, que é o que zera o timer de
+          #    pausa. Não usamos esse código como sinal de sucesso.
+          db=$(curl -s -o /dev/null -w "%{http_code}" \
             "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
-          echo "Supabase respondeu HTTP $code"
-          # 200 (lista, possivelmente vazia por RLS) = projeto acordado e ativo.
-          if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
-            echo "::error::Ping falhou (HTTP $code) — projeto pode estar pausado ou a key expirou."
+            -H "apikey: ${SUPABASE_ANON_KEY}")
+          echo "REST/Postgres respondeu HTTP $db (401 por RLS é esperado e tudo bem)"
+
+          # 2) Sinal de saúde confiável: /auth/v1/health devolve 200 quando o
+          #    projeto está no ar. Se estiver pausado, não responde 200.
+          health=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/auth/v1/health" \
+            -H "apikey: ${SUPABASE_ANON_KEY}")
+          echo "Auth health respondeu HTTP $health"
+
+          if [ "$health" != "200" ]; then
+            echo "::error::Projeto não respondeu 200 no health (HTTP $health) — pode estar pausado ou a URL/key mudou."
             exit 1
           fi
+          echo "Supabase ativo ✓"
