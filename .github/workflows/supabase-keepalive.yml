@@ -1,14 +1,13 @@
 name: Supabase Keep-Alive
 
 # Mantém o projeto Supabase (plano free) ativo: ele pausa após 7 dias sem
-# atividade, então pingamos a API REST a cada 3 dias. Roda na infra do GitHub,
-# sem depender de nenhuma máquina local estar ligada.
+# atividade. Roda na infra do GitHub, sem depender de nenhuma máquina local.
 
 on:
   schedule:
-    # A cada 3 dias às 06:00 UTC (dias 1, 4, 7, ... do mês). Gap máximo ~4 dias,
-    # bem abaixo dos 7 que disparam a pausa.
-    - cron: '0 6 */3 * *'
+    # Todo dia. O agendador do GitHub atrasa várias horas e pode pular execuções,
+    # então a frequência diária deixa margem de sobra até os 7 dias.
+    - cron: '17 9 * * *'
   # Permite disparar na mão pelo botão "Run workflow" na aba Actions.
   workflow_dispatch:
 
@@ -16,29 +15,32 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase (mantém o projeto ativo)
+      - name: Consulta real no banco (mantém o projeto ativo)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          # 1) Atividade no banco: uma query real no Postgres via PostgREST.
-          #    profiles é protegida por RLS, então o anon leva 401/42501 — mas a
-          #    query CHEGA ao Postgres mesmo assim, que é o que zera o timer de
-          #    pausa. Não usamos esse código como sinal de sucesso.
-          db=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_ANON_KEY}")
-          echo "REST/Postgres respondeu HTTP $db (401 por RLS é esperado e tudo bem)"
+          # is_username_available é liberada para anon e lê public.profiles, então
+          # uma resposta 200 prova que a query rodou de ponta a ponta no Postgres.
+          # Os retries cobrem falhas passageiras e o cache vazio de quando o
+          # projeto acabou de acordar (404 PGRST205 por alguns minutos).
+          resposta=$(curl -sS --max-time 30 \
+            --retry 5 --retry-delay 30 --retry-all-errors --fail-with-body \
+            -X POST "${SUPABASE_URL}/rest/v1/rpc/is_username_available" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"p_username":"keepalive_probe"}') || {
+            codigo=$?
+            if [ "$codigo" = "6" ]; then
+              echo "::error::DNS do projeto não resolveu: ele provavelmente está pausado. Restaure no dashboard do Supabase."
+            else
+              echo "::error::Consulta falhou (curl $codigo): ${resposta}"
+            fi
+            exit 1
+          }
 
-          # 2) Sinal de saúde confiável: /auth/v1/health devolve 200 quando o
-          #    projeto está no ar. Se estiver pausado, não responde 200.
-          health=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${SUPABASE_URL}/auth/v1/health" \
-            -H "apikey: ${SUPABASE_ANON_KEY}")
-          echo "Auth health respondeu HTTP $health"
-
-          if [ "$health" != "200" ]; then
-            echo "::error::Projeto não respondeu 200 no health (HTTP $health) — pode estar pausado ou a URL/key mudou."
+          if [ "$resposta" != "true" ] && [ "$resposta" != "false" ]; then
+            echo "::error::Resposta inesperada do banco: ${resposta}"
             exit 1
           fi
-          echo "Supabase ativo ✓"
+          echo "Supabase ativo: consulta real executada no Postgres ✓"
