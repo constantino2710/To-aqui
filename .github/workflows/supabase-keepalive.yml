@@ -15,32 +15,60 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Consulta real no banco (mantém o projeto ativo)
+      - name: Leitura, login e logout no banco (mantém o projeto ativo)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          KEEPALIVE_EMAIL: ${{ secrets.SUPABASE_KEEPALIVE_EMAIL }}
+          KEEPALIVE_PASSWORD: ${{ secrets.SUPABASE_KEEPALIVE_PASSWORD }}
         run: |
-          # is_username_available é liberada para anon e lê public.profiles, então
-          # uma resposta 200 prova que a query rodou de ponta a ponta no Postgres.
           # Os retries cobrem falhas passageiras e o cache vazio de quando o
           # projeto acabou de acordar (404 PGRST205 por alguns minutos).
-          resposta=$(curl -sS --max-time 30 \
-            --retry 5 --retry-delay 30 --retry-all-errors --fail-with-body \
-            -X POST "${SUPABASE_URL}/rest/v1/rpc/is_username_available" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"p_username":"keepalive_probe"}') || {
-            codigo=$?
-            if [ "$codigo" = "6" ]; then
+          chamar() {
+            curl -sS --max-time 30 \
+              --retry 5 --retry-delay 30 --retry-all-errors --fail-with-body \
+              -X POST -H "apikey: ${SUPABASE_ANON_KEY}" "$@"
+          }
+
+          falhar() {
+            if [ "$2" = "6" ]; then
               echo "::error::DNS do projeto não resolveu: ele provavelmente está pausado. Restaure no dashboard do Supabase."
             else
-              echo "::error::Consulta falhou (curl $codigo): ${resposta}"
+              echo "::error::$1 falhou (curl $2): $3"
             fi
             exit 1
           }
 
+          # 1) Leitura: is_username_available é liberada para anon e lê
+          #    public.profiles, então o 200 prova que a query rodou no Postgres.
+          resposta=$(chamar "${SUPABASE_URL}/rest/v1/rpc/is_username_available" \
+            -H "Content-Type: application/json" \
+            -d '{"p_username":"keepalive_probe"}') || falhar "Leitura" "$?" "$resposta"
+
           if [ "$resposta" != "true" ] && [ "$resposta" != "false" ]; then
-            echo "::error::Resposta inesperada do banco: ${resposta}"
-            exit 1
+            falhar "Leitura" "resposta inesperada" "$resposta"
           fi
-          echo "Supabase ativo: consulta real executada no Postgres ✓"
+          echo "Leitura ok"
+
+          # 2) Escrita: o login cria a sessão em auth.sessions e atualiza
+          #    auth.users.last_sign_in_at.
+          credenciais=$(jq -n --arg email "$KEEPALIVE_EMAIL" --arg password "$KEEPALIVE_PASSWORD" \
+            '{email: $email, password: $password}')
+          sessao=$(chamar "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
+            -H "Content-Type: application/json" \
+            -d "$credenciais") || falhar "Login" "$?" "$sessao"
+
+          token=$(jq -r '.access_token // empty' <<< "$sessao")
+          if [ -z "$token" ]; then
+            falhar "Login" "sem token" "a resposta não trouxe access_token"
+          fi
+          echo "::add-mask::$token"
+          echo "Login ok"
+
+          # 3) Escrita: o logout apaga a sessão criada acima. scope=local encerra
+          #    só esta sessão, sem derrubar outras da mesma conta.
+          saida=$(chamar "${SUPABASE_URL}/auth/v1/logout?scope=local" \
+            -H "Authorization: Bearer ${token}") || falhar "Logout" "$?" "$saida"
+          echo "Logout ok"
+
+          echo "Supabase ativo: leitura e escrita executadas no Postgres ✓"
