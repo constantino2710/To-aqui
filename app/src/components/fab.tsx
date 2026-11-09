@@ -1,63 +1,57 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { type ComponentProps } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomTabInset, Radii, Spacing } from '@/constants/theme';
+import { PressableScale } from '@/components/pressable-scale';
+import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type FabProps = {
   onPress: () => void;
   /** Descrição para leitores de tela, ex.: "Criar família". */
   accessibilityLabel: string;
-  /** Ícone do MaterialCommunityIcons. Padrão: um "+" encorpado. */
-  icone?: ComponentProps<typeof MaterialCommunityIcons>['name'];
-  /** Quando a tela NÃO está dentro das abas, desliga a folga da barra inferior. */
+  /** Ícone do Ionicons. Padrão: "add". */
+  icone?: ComponentProps<typeof Ionicons>['name'];
+  /** Quando a tela NÃO está dentro das abas, soma a área segura de baixo. */
   semBarraDeAbas?: boolean;
 };
 
 /**
- * Botão de ação flutuante: círculo fixo no canto inferior direito, logo acima
- * da barra de abas. É a ação de criar da tela.
+ * Botão de ação flutuante: círculo grafite de 56 px no canto inferior direito.
+ * Dentro das abas, a barra inferior fica no fluxo (abaixo da tela), então 16 px
+ * de folga já deixam o botão logo acima dela.
  */
-export function Fab({ onPress, accessibilityLabel, icone = 'plus-thick', semBarraDeAbas = false }: FabProps) {
+export function Fab({ onPress, accessibilityLabel, icone = 'add', semBarraDeAbas = false }: FabProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  // A barra de abas é personalizada, então o contexto de altura do navigator
-  // não é sempre preenchido. Reservamos a área dela explicitamente para o
-  // botão não ficar escondido atrás da navegação inferior.
-  const bottom =
-    semBarraDeAbas
-      ? insets.bottom + Spacing.three
-      : Math.max(BottomTabInset, insets.bottom + 76) + Spacing.three;
+  const bottom = semBarraDeAbas ? insets.bottom + Spacing.three : Spacing.three;
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={[
-        styles.fab,
-        { backgroundColor: theme.brand, shadowColor: theme.shadow, right: Spacing.four, bottom },
-      ]}>
-      <MaterialCommunityIcons name={icone} size={32} color={theme.onBrand} />
-    </Pressable>
+      externo={[styles.posicao, { right: Spacing.four, bottom }]}
+      style={[styles.fab, { backgroundColor: theme.action }]}>
+      <Ionicons name={icone} size={30} color={theme.onAction} />
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
+  posicao: {
     position: 'absolute',
+    zIndex: 10,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: Radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
-    zIndex: 10,
+    boxShadow: '0 10px 24px rgba(30, 35, 32, 0.28)',
+    elevation: 6,
   },
 });

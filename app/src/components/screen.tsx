@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { Children, isValidElement, type ReactNode } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Entrada } from '@/components/entrada';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -48,17 +49,28 @@ export function Screen({
         {acao}
       </View>
       {subtitulo && (
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText themeColor="textSecondary" style={styles.subtitulo}>
           {subtitulo}
         </ThemedText>
       )}
     </View>
   );
 
+  // Cada bloco entra com fade + leve deslize, um depois do outro. Em telas que
+  // gerenciam a própria rolagem (FlatList) os filhos ficam como estão, porque
+  // envolvê-los quebraria o `flex: 1` deles.
+  const blocos = semRolagem
+    ? children
+    : Children.toArray(children).map((filho, i) => (
+        <Entrada key={isValidElement(filho) && filho.key != null ? filho.key : i} indice={i + 1}>
+          {filho}
+        </Entrada>
+      ));
+
   const corpo = (
     <View style={styles.conteudo}>
-      {cabecalho}
-      {children}
+      {cabecalho && <Entrada indice={0}>{cabecalho}</Entrada>}
+      {blocos}
     </View>
   );
 
@@ -95,8 +107,8 @@ const styles = StyleSheet.create({
   },
   rolagem: {
     flexGrow: 1,
-    // Folga no fim para o último item não ficar embaixo da barra de abas.
-    paddingBottom: Spacing.six,
+    // A barra de abas fica no fluxo (abaixo do conteúdo), então só sobra respiro.
+    paddingBottom: Spacing.four,
   },
   conteudo: {
     flex: 1,
@@ -106,16 +118,22 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.four,
   },
+  // Ritmo: 24 entre o cabeçalho e os blocos (gap de `conteudo`), 8 entre título
+  // e subtítulo, e 8 de recuo lateral para alinhar com a curva das pílulas.
   cabecalho: {
-    gap: Spacing.one,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.two,
   },
   tituloLinha: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   titulo: {
     flexShrink: 1,
+  },
+  subtitulo: {
+    fontWeight: 400,
   },
 });

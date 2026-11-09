@@ -12,8 +12,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F7F5F2",
-        "foregroundImage": "./assets/images/found-logo-v2.png"
+        "backgroundColor": "#F1F2F0",
+        "foregroundImage": "./assets/images/found-logo-v2.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -31,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F7F5F2",
+          "backgroundColor": "#F1F2F0",
           "image": "./assets/images/found-logo-v2.png",
           "imageWidth": 180
         }
@@ -53,7 +54,7 @@
       [
         "expo-notifications",
         {
-          "color": "#405078",
+          "color": "#3FA584",
           "defaultChannel": "location-found"
         }
       ],

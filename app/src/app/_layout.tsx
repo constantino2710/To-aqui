@@ -1,10 +1,19 @@
 import '../../global.css';
 
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ToastProvider } from '@/components/toast';
+import { Motion } from '@/constants/motion';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemePreferenceProvider, useThemePreference } from '@/lib/theme-preference';
 
@@ -19,7 +28,8 @@ function RootNavigator() {
   if (isLoading) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    // Entrar/sair do app: as duas áreas se sobrepõem com um fade curto.
+    <Stack screenOptions={{ headerShown: false, animation: 'fade', animationDuration: Motion.base }}>
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
@@ -47,6 +57,17 @@ function RootContent() {
 }
 
 export default function RootLayout() {
+  const [fontesProntas, erroFontes] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  // Segura a splash até as fontes chegarem; se falharem, segue com a do sistema.
+  if (!fontesProntas && !erroFontes) return null;
+
   return (
     <ThemePreferenceProvider>
       <RootContent />

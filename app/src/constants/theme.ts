@@ -1,34 +1,47 @@
 import { Platform } from 'react-native';
 
 /**
- * Paleta-base denim sobre neutros levemente quentes. Verde é reservado para sucesso.
+ * Paleta Sálvia: neutros levemente esverdeados, ações em grafite e um degradê
+ * verde-água → verde reservado para localização, estados "ao vivo" e confirmações.
  * Os valores aqui espelham o contrato de tokens em `global.css` (variáveis HSL),
- * que também é usado pelo site em `finder-site/src/styles.css`. Mantenha os dois
+ * que também é usado pelo site em `finder-site/src/styles.css`. Mantenha os
  * lados em sincronia ao ajustar a identidade.
  */
 export const Palette = {
   white: '#FFFFFF',
-  ink: '#24262D',
 
+  // Grafite: texto principal e botões de ação.
+  graphite: '#1E2320',
+  ink: '#1E2320',
+
+  // Sálvia: degradê de destaque e seus apoios.
+  sage500: '#3FA584',
+  sage400: '#6CC160',
+  sage700: '#1F7A5C',
+  sage100: '#E3F3EC',
+  sage200dark: '#1D3A2E',
+  sage300dark: '#8EE0BA',
+
+  // Neutros claros.
+  gray700: '#636B66',
+  gray300: '#A3ABA6',
+  gray200: '#E6E9E5',
+  gray150: '#E8EAE6',
+  gray50: '#F1F2F0',
+
+  // Neutros escuros.
+  night: '#121614',
+  nightSoft: '#1B201D',
+  nightRaised: '#252B27',
+  nightBorder: '#2A302C',
+
+  // Destaque pontual (selos, "QR ativo").
+  sun: '#F5C542',
+
+  // Legado: ainda usados em telas que serão repaginadas depois.
   denim700: '#405078',
   denim500: '#6B7FB6',
-  denim300: '#AFC1F5',
-
-  // Verde semântico: confirmações, estado seguro e localização positiva.
-  emerald700: '#2E7D5B',
   emerald500: '#10B981',
-  emerald400: '#57C28D',
-
-  gray700: '#6B6F79',
-  gray300: '#B7BAC2',
-  gray200: '#DEDCD7',
-  gray100: '#F0EEEA',
-  gray50: '#F7F5F2',
-
-  night: '#1C1F26',
-  nightSoft: '#252932',
-  nightRaised: '#303441',
-  nightBorder: '#3B404F',
 
   rose: '#FB7185',
   orange: '#FB923C',
@@ -36,26 +49,37 @@ export const Palette = {
   teal: '#14B8A6',
   amber: '#F59E0B',
   lime: '#84CC16',
-  red: '#E5484D',
+  // Vermelho de erro: escuro o bastante para texto de 14 px sobre branco (≥ 4,5:1).
+  red: '#C73A3F',
 
-  charcoal: '#24262D',
-  shadow: 'rgba(36, 38, 45, 0.08)',
-  shadowDark: 'rgba(0, 0, 0, 0.28)',
-  overlay: 'rgba(10, 11, 14, 0.66)',
+  shadow: 'rgba(30, 35, 32, 0.08)',
+  shadowDark: 'rgba(0, 0, 0, 0.32)',
+  overlay: 'rgba(10, 12, 11, 0.66)',
 } as const;
 
 /** Tokens semânticos consumidos pelos componentes. */
 export const Colors = {
   light: {
-    text: Palette.ink,
+    text: Palette.graphite,
     background: Palette.gray50,
-    backgroundElement: '#FFFEFC',
-    backgroundSelected: '#E9E7E3',
+    backgroundElement: Palette.white,
+    backgroundSelected: Palette.gray150,
     textSecondary: Palette.gray700,
-    brand: Palette.denim700,
+    /** Cor da marca para texto e ícones (links, destaques). */
+    brand: Palette.sage700,
     onBrand: Palette.white,
+    /** Botão de ação principal (grafite). */
+    action: Palette.graphite,
+    onAction: Palette.white,
+    /** Fundo suave do destaque (chips, ícones em foco). */
+    brandSoft: Palette.sage100,
+    /** Pontas do degradê de destaque. */
+    gradientFrom: Palette.sage500,
+    gradientTo: Palette.sage400,
     danger: Palette.red,
-    success: Palette.emerald700,
+    /** Fundo suave de erro (avisos, selos). */
+    dangerSoft: '#FCE8E9',
+    success: Palette.sage700,
     border: Palette.gray200,
     shadow: Palette.shadow,
     overlay: Palette.overlay,
@@ -64,15 +88,21 @@ export const Colors = {
     accentBlue: Palette.blue,
   },
   dark: {
-    text: Palette.white,
+    text: Palette.gray50,
     background: Palette.night,
     backgroundElement: Palette.nightSoft,
     backgroundSelected: Palette.nightRaised,
     textSecondary: Palette.gray300,
-    brand: Palette.denim300,
+    brand: Palette.sage300dark,
     onBrand: Palette.night,
-    danger: '#FF6B70',
-    success: Palette.emerald400,
+    action: Palette.gray50,
+    onAction: Palette.night,
+    brandSoft: Palette.sage200dark,
+    gradientFrom: Palette.sage500,
+    gradientTo: Palette.sage400,
+    danger: '#FF8A8F',
+    dangerSoft: '#3A1E20',
+    success: Palette.sage300dark,
     border: Palette.nightBorder,
     shadow: Palette.shadowDark,
     overlay: Palette.overlay,
@@ -84,38 +114,75 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-/** Cores de avatar: multi-hue que harmoniza com o verde da marca. */
-export const AvatarColors = [
-  Palette.denim500,
-  Palette.teal,
-  Palette.emerald500,
-  Palette.lime,
-  Palette.amber,
-  Palette.orange,
-  Palette.rose,
-] as const;
+/**
+ * Avatares: fundo suave + iniciais na mesma matiz, em tom escuro. Todos passam
+ * de 4,5:1 (texto sobre fundo). A matiz sai de uma "semente" estável da pessoa.
+ */
+export const AvatarTints = {
+  light: [
+    { bg: '#E3F3EC', fg: '#1F7A5C' },
+    { bg: '#E4EBFA', fg: '#2C4A9A' },
+    { bg: '#FCEBE2', fg: '#9A3F16' },
+    { bg: '#F0E8FA', fg: '#6A3A9A' },
+    { bg: '#FFF1CC', fg: '#7A5A00' },
+  ],
+  dark: [
+    { bg: '#1D3A2E', fg: '#8EE0BA' },
+    { bg: '#1E2A4A', fg: '#A9BDF5' },
+    { bg: '#3B2218', fg: '#F6B79A' },
+    { bg: '#2E2140', fg: '#CBA9F0' },
+    { bg: '#3A2E10', fg: '#F5D27A' },
+  ],
+} as const;
+
+/**
+ * Plus Jakarta Sans, carregada em `app/_layout.tsx`. Cada peso é uma família
+ * própria (exigência do Android), então use `fontePorPeso` em vez de só
+ * `fontWeight`.
+ */
+export const JakartaFamilies = {
+  400: 'PlusJakartaSans_400Regular',
+  500: 'PlusJakartaSans_500Medium',
+  600: 'PlusJakartaSans_600SemiBold',
+  700: 'PlusJakartaSans_700Bold',
+  800: 'PlusJakartaSans_800ExtraBold',
+} as const;
+
+type Peso = keyof typeof JakartaFamilies;
+
+/** Converte um `fontWeight` qualquer na família Plus Jakarta Sans equivalente. */
+export function fontePorPeso(peso?: string | number | null): string {
+  const n = peso === 'bold' ? 700 : peso === 'normal' || peso == null ? 400 : Number(peso);
+  const pesos = Object.keys(JakartaFamilies).map(Number) as Peso[];
+  const maisProximo = pesos.reduce((a, b) => (Math.abs(b - n) < Math.abs(a - n) ? b : a), 400 as Peso);
+  return JakartaFamilies[maisProximo];
+}
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'system-ui',
+    sans: JakartaFamilies[400],
     serif: 'ui-serif',
     rounded: 'ui-rounded',
     mono: 'ui-monospace',
   },
   default: {
-    sans: 'normal',
+    sans: JakartaFamilies[400],
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
-    sans: 'var(--font-display)',
+    sans: JakartaFamilies[400],
     serif: 'var(--font-serif)',
     rounded: 'var(--font-rounded)',
     mono: 'var(--font-mono)',
   },
 });
 
+/**
+ * Espaçamento em grade de 8 (com 4 e 2 só para ajustes finos). Prefira
+ * `two`, `three`, `four` e `five`; evite somar ou subtrair (`three + 4`).
+ */
 export const Spacing = {
   half: 2,
   one: 4,
@@ -126,11 +193,33 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/**
+ * Escala tipográfica. Texto corrido e rótulos usam só 14 / 16 / 18;
+ * títulos têm escala própria. Marcas (logo) ficam fora da escala.
+ */
+export const FontSize = {
+  small: 14,
+  body: 16,
+  large: 18,
+  heading: 28,
+  display: 40,
+} as const;
+
+export const LineHeight = {
+  small: 20,
+  body: 24,
+  large: 26,
+  heading: 34,
+  display: 46,
+} as const;
+
 export const Radii = {
   small: 8,
-  medium: 11,
-  large: 15,
-  extraLarge: 20,
+  medium: 13,
+  large: 22,
+  extraLarge: 28,
+  /** Cartões de destaque e janelas: cartão escuro do perfil, card do mapa, modais. */
+  huge: 32,
   pill: 999,
 } as const;
 

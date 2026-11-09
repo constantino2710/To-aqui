@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
+import { PressableScale } from '@/components/pressable-scale';
 import { ThemedView } from '@/components/themed-view';
+import { EscalaToque } from '@/constants/motion';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -25,28 +27,23 @@ export function Card({ children, onPress, style }: CardProps) {
   }
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      {({ pressed }) => (
-        <ThemedView
-          type="backgroundElement"
-          style={[cardStyle, pressed && styles.pressionado]}>
-          {children}
-        </ThemedView>
-      )}
-    </Pressable>
+    <PressableScale accessibilityRole="button" onPress={onPress} escala={EscalaToque.cartao}>
+      <ThemedView type="backgroundElement" style={cardStyle}>
+        {children}
+      </ThemedView>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
+  // Cartão branco sobre o fundo cinza: sem borda nem sombra, cantos de 28 e
+  // 24 de respiro (listas densas passam `padding` menor pelo `style`).
   card: {
-    borderRadius: Radii.large,
-    padding: Spacing.three,
-    gap: Spacing.two,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radii.extraLarge,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    borderWidth: 0,
     shadowOpacity: 0,
     elevation: 0,
-  },
-  pressionado: {
-    opacity: 0.7,
   },
 });

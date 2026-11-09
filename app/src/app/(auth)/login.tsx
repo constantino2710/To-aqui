@@ -1,16 +1,15 @@
-import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card } from '@/components/card';
 import { DevAccountSwitcher } from '@/components/dev-account-switcher';
+import { IconField } from '@/components/icon-field';
+import { LocationHero } from '@/components/location-hero';
 import { PrimaryButton } from '@/components/primary-button';
-import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Radii, Spacing } from '@/constants/theme';
+import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroAuth } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
@@ -49,19 +48,13 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.content}>
-              <View style={styles.cabecalho}>
-                <Image
-                  source={require('@/assets/images/found-logo-v2.png')}
-                  style={styles.marca}
-                  contentFit="contain"
-                  accessibilityLabel="Found"
-                />
-                <View style={styles.titulos}>
-                  <ThemedText type="subtitle">Bem-vindo de volta</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Entre para acompanhar sua família no Found.
-                  </ThemedText>
-                </View>
+              <LocationHero marca />
+
+              <View style={styles.titulos}>
+                <ThemedText type="subtitle">Bem-vindo de volta</ThemedText>
+                <ThemedText themeColor="textSecondary" style={styles.apoio}>
+                  Entre para acompanhar sua família no Found.
+                </ThemedText>
               </View>
 
               {confirmError && (
@@ -70,9 +63,10 @@ export default function LoginScreen() {
                 </ThemedView>
               )}
 
-              <Card style={styles.card}>
-                <TextField
+              <View style={styles.formulario}>
+                <IconField
                   label="E-mail"
+                  icon="mail-outline"
                   value={email}
                   onChangeText={setEmail}
                   placeholder="voce@exemplo.com"
@@ -81,10 +75,12 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   inputMode="email"
                   textContentType="emailAddress"
+                  returnKeyType="next"
                 />
 
-                <TextField
+                <IconField
                   label="Senha"
+                  icon="lock-closed-outline"
                   value={senha}
                   onChangeText={setSenha}
                   placeholder="••••••••"
@@ -97,24 +93,30 @@ export default function LoginScreen() {
                 />
 
                 {erro && (
-                  <ThemedText type="small" themeColor="danger">
+                  <ThemedText type="small" themeColor="danger" style={styles.erro}>
                     {erro}
                   </ThemedText>
                 )}
 
-                <PrimaryButton label="Entrar" onPress={entrar} loading={enviando} disabled={!podeEnviar} />
-              </Card>
+                <View style={styles.acao}>
+                  <PrimaryButton label="Entrar" onPress={entrar} loading={enviando} disabled={!podeEnviar} />
+                </View>
+              </View>
 
               <View style={styles.rodape}>
                 <ThemedText type="small" themeColor="textSecondary">
                   Ainda não tem conta?
                 </ThemedText>
                 <Link href="/signup">
-                  <ThemedText type="linkPrimary">Cadastre-se</ThemedText>
+                  <ThemedText type="small" themeColor="brand" style={styles.link}>
+                    Cadastre-se
+                  </ThemedText>
                 </Link>
               </View>
+            </View>
 
-              <DevAccountSwitcher label="Trocar de conta" />
+            <View style={[styles.content, styles.dev]}>
+              <DevAccountSwitcher label="Trocar de conta (teste)" />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -127,10 +129,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // Ritmo vertical: 24 entre os blocos (mapa, títulos, formulário, rodapé),
+  // 8 entre itens do mesmo grupo (título/apoio, campo/campo).
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: Spacing.five,
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.four,
     paddingHorizontal: Spacing.four,
   },
   content: {
@@ -139,28 +143,40 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     gap: Spacing.four,
   },
-  cabecalho: {
-    gap: Spacing.three,
-  },
-  marca: {
-    width: 64,
-    height: 64,
-  },
   titulos: {
-    gap: Spacing.one,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.two,
+  },
+  apoio: {
+    fontSize: FontSize.body,
+    lineHeight: LineHeight.body,
+    fontWeight: 400,
   },
   aviso: {
     padding: Spacing.three,
     borderRadius: Radii.medium,
   },
-  card: {
-    gap: Spacing.three,
-    padding: Spacing.four,
+  formulario: {
+    gap: Spacing.two,
+  },
+  erro: {
+    paddingHorizontal: Spacing.two,
+  },
+  // 8 do gap + 8 aqui = 16 entre o último campo e o botão.
+  acao: {
+    marginTop: Spacing.two,
   },
   rodape: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  link: {
+    fontWeight: 700,
+  },
+  dev: {
+    marginTop: 'auto',
+    paddingTop: Spacing.four,
   },
 });

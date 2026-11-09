@@ -1,18 +1,16 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { AvatarColors, Palette } from '@/constants/theme';
+import { AvatarTints, JakartaFamilies } from '@/constants/theme';
+import { useThemePreference } from '@/lib/theme-preference';
 
 export type AvatarProps = {
   /** Nome completo. As iniciais saem daqui. */
   nome: string;
-  /** Usado só para escolher a cor de fundo, sempre a mesma para a mesma pessoa. */
+  /** Usado só para escolher a cor, sempre a mesma para a mesma pessoa. */
   semente?: string;
   tamanho?: number;
 };
-
-// Paleta com contraste suficiente para texto branco por cima, nos dois temas.
-const FUNDOS = AvatarColors;
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean);
@@ -21,28 +19,35 @@ function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
-function corDe(texto: string): string {
+function indiceDe(texto: string, total: number): number {
   // Soma dos códigos: estável entre sessões e entre aparelhos, que é o que
   // importa — a mesma pessoa nunca troca de cor.
   let soma = 0;
   for (let i = 0; i < texto.length; i += 1) soma += texto.charCodeAt(i);
-  return FUNDOS[soma % FUNDOS.length];
+  return soma % total;
 }
 
 /**
  * Só iniciais, por enquanto: `profiles.avatar_path` existe no banco mas ainda não
  * há upload de imagem no app. Quando houver, é aqui que a foto entra.
+ * Visual: fundo suave e iniciais na mesma matiz (ver `AvatarTints`).
  */
-export function Avatar({ nome, semente, tamanho = 44 }: AvatarProps) {
-  const fundo = corDe(semente ?? nome);
+export function Avatar({ nome, semente, tamanho = 48 }: AvatarProps) {
+  const { mode } = useThemePreference();
+  const tons = AvatarTints[mode];
+  const tom = tons[indiceDe(semente ?? nome, tons.length)];
 
   return (
     <View
       style={[
         styles.circulo,
-        { width: tamanho, height: tamanho, borderRadius: tamanho / 2, backgroundColor: fundo },
+        { width: tamanho, height: tamanho, borderRadius: tamanho / 2, backgroundColor: tom.bg },
       ]}>
-      <ThemedText style={[styles.iniciais, { fontSize: tamanho * 0.36 }]}>
+      <ThemedText
+        style={[
+          styles.iniciais,
+          { color: tom.fg, fontSize: Math.round(tamanho * 0.34), lineHeight: Math.round(tamanho * 0.42) },
+        ]}>
         {iniciais(nome)}
       </ThemedText>
     </View>
@@ -55,7 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iniciais: {
-    color: Palette.white,
-    fontWeight: '700',
+    fontFamily: JakartaFamilies[700],
+    fontWeight: 'normal',
   },
 });

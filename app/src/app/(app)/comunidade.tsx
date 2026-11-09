@@ -1,16 +1,18 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, TextInput, View, type TextStyle } from 'react-native';
 
+import { ActionPill } from '@/components/action-pill';
 import { EmptyState } from '@/components/empty-state';
+import { IconButton } from '@/components/icon-button';
 import { PersonRow } from '@/components/person-row';
-import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
-import { SecondaryButton } from '@/components/secondary-button';
+import { Section } from '@/components/section';
 import { ThemedText } from '@/components/themed-text';
-import { TextField } from '@/components/text-field';
 import { useToast } from '@/components/toast';
-import { Spacing } from '@/constants/theme';
+import { FontSize, JakartaFamilies, LineHeight, Radii, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { traduzErroBanco } from '@/lib/db-errors';
 import { supabase } from '@/lib/supabase';
 
@@ -33,6 +35,7 @@ type ResultadoBusca = {
 };
 
 export default function ComunidadeScreen() {
+  const theme = useTheme();
   const { notificar } = useToast();
   const [amizades, setAmizades] = useState<Amizade[]>([]);
   const [busca, setBusca] = useState('');
@@ -112,55 +115,66 @@ export default function ComunidadeScreen() {
       aoAtualizar={carregar}
       atualizando={carregando}>
       <View style={styles.busca}>
-        <TextField
-          label="Buscar amigos"
-          placeholder="@username ou tag, ex.: ABC234"
-          value={busca}
-          onChangeText={setBusca}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-          onSubmitEditing={pesquisar}
-        />
-        <PrimaryButton label="Buscar" onPress={pesquisar} loading={buscando} />
+        <View style={[styles.campoBusca, { backgroundColor: theme.backgroundElement }]}>
+          <Ionicons name="search" size={20} color={theme.textSecondary} />
+          <TextInput
+            accessibilityLabel="Buscar amigos"
+            placeholder="Buscar amigos"
+            placeholderTextColor={theme.textSecondary}
+            value={busca}
+            onChangeText={setBusca}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            onSubmitEditing={pesquisar}
+            style={[styles.input, semAnelDoNavegador, { color: theme.text }]}
+          />
+        </View>
+        <IconButton icone="search" rotulo="Buscar" tamanho={56} loading={buscando} onPress={pesquisar} />
       </View>
 
       {resultados.length > 0 && (
-        <View style={styles.secao}>
-          <ThemedText type="smallBold">Resultados</ThemedText>
-          {resultados.map((pessoa) => (
-            <PersonRow
-              key={pessoa.id}
-              nome={pessoa.full_name}
-              username={pessoa.username}
-              semente={pessoa.id}
-              direita={
-                pessoa.friendship_status === 'aceito' ? (
-                  <ThemedText type="small" themeColor="success">Amigo</ThemedText>
-                ) : pessoa.friendship_status === 'pendente' && pessoa.sou_o_solicitante ? (
-                  <ThemedText type="small" themeColor="textSecondary">Enviado</ThemedText>
-                ) : (
-                  <SecondaryButton
-                    label={pessoa.friendship_status === 'pendente' ? 'Aceitar' : 'Adicionar'}
-                    tom="marca"
-                    compacto
-                    loading={processando === pessoa.id}
-                    onPress={() =>
-                      pessoa.friendship_status === 'pendente' && pessoa.friendship_id
-                        ? responder(pessoa.friendship_id, true)
-                        : adicionar(pessoa)
-                    }
-                  />
-                )
-              }
-            />
-          ))}
-        </View>
+        <Section titulo="Resultados">
+          {resultados.map((pessoa) => {
+            const amigo = pessoa.friendship_status === 'aceito';
+            const enviado = pessoa.friendship_status === 'pendente' && !!pessoa.sou_o_solicitante;
+            return (
+              <PersonRow
+                key={pessoa.id}
+                nome={pessoa.full_name}
+                username={pessoa.username}
+                semente={pessoa.id}
+                direitaSolta={amigo || enviado}
+                direita={
+                  amigo ? (
+                    <View style={styles.amigo}>
+                      <Ionicons name="checkmark" size={16} color={theme.success} />
+                      <ThemedText type="small" themeColor="success" style={styles.negrito}>
+                        Amigo
+                      </ThemedText>
+                    </View>
+                  ) : enviado ? (
+                    <ThemedText type="small" themeColor="textSecondary">Enviado</ThemedText>
+                  ) : (
+                    <ActionPill
+                      label={pessoa.friendship_status === 'pendente' ? 'Aceitar' : 'Adicionar'}
+                      loading={processando === pessoa.id}
+                      onPress={() =>
+                        pessoa.friendship_status === 'pendente' && pessoa.friendship_id
+                          ? responder(pessoa.friendship_id, true)
+                          : adicionar(pessoa)
+                      }
+                    />
+                  )
+                }
+              />
+            );
+          })}
+        </Section>
       )}
 
       {pedidos.length > 0 && (
-        <View style={styles.secao}>
-          <ThemedText type="smallBold">Pedidos</ThemedText>
+        <Section titulo="Pedidos">
           {pedidos.map((pessoa) => (
             <PersonRow
               key={pessoa.friendship_id}
@@ -170,31 +184,65 @@ export default function ComunidadeScreen() {
               detalhe={pessoa.sou_o_solicitante ? 'Pedido enviado' : 'Quer adicionar você'}
               direita={
                 pessoa.sou_o_solicitante ? undefined : (
-                  <View style={styles.acoes}>
-                    <SecondaryButton label="Recusar" compacto tom="perigo" onPress={() => responder(pessoa.friendship_id, false)} />
-                    <SecondaryButton label="Aceitar" compacto tom="marca" loading={processando === pessoa.friendship_id} onPress={() => responder(pessoa.friendship_id, true)} />
-                  </View>
+                  <>
+                    <IconButton
+                      icone="close"
+                      variante="perigo"
+                      rotulo={`Recusar pedido de ${pessoa.full_name}`}
+                      onPress={() => responder(pessoa.friendship_id, false)}
+                    />
+                    <IconButton
+                      icone="checkmark"
+                      variante="escuro"
+                      rotulo={`Aceitar pedido de ${pessoa.full_name}`}
+                      loading={processando === pessoa.friendship_id}
+                      onPress={() => responder(pessoa.friendship_id, true)}
+                    />
+                  </>
                 )
               }
             />
           ))}
-        </View>
+        </Section>
       )}
 
-      <View style={styles.secao}>
-        <ThemedText type="smallBold">Meus amigos</ThemedText>
+      <Section titulo="Meus amigos">
         {!carregando && amigos.length === 0 ? (
           <EmptyState icone="person-add-outline" titulo="Sua comunidade começa aqui" descricao="Busque alguém acima para enviar o primeiro pedido de amizade." />
         ) : (
           amigos.map((pessoa) => <PersonRow key={pessoa.friendship_id} nome={pessoa.full_name} username={pessoa.username} semente={pessoa.profile_id} />)
         )}
-      </View>
+      </Section>
     </Screen>
   );
 }
 
+// No navegador, o <input> ganha um anel de foco próprio; a pílula já basta.
+const semAnelDoNavegador = (
+  Platform.OS === 'web' ? { outlineStyle: 'none', outlineWidth: 0 } : {}
+) as TextStyle;
+
 const styles = StyleSheet.create({
-  busca: { gap: Spacing.two },
-  secao: { gap: Spacing.two },
-  acoes: { flexDirection: 'row', gap: Spacing.one },
+  busca: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  campoBusca: {
+    flex: 1,
+    minWidth: 0,
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radii.pill,
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: JakartaFamilies[500],
+    fontSize: FontSize.body,
+    lineHeight: LineHeight.body,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  amigo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  negrito: { fontWeight: 700 },
 });

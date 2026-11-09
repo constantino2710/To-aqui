@@ -1,6 +1,7 @@
 import { isRunningInExpoGo } from 'expo';
 import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
 import { registrarPushDoAparelho } from '@/lib/push-notifications';
@@ -18,6 +19,9 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!session?.user.id) return;
+    // O expo-notifications não existe no navegador: chamar qualquer API dele lá
+    // lança "not available on web" logo após o login.
+    if (Platform.OS === 'web') return;
     // Expo Go (SDK 53+) removeu o push remoto no Android; carregar o módulo só
     // fora do Expo Go evita o crash. Sem dev build o app roda normal, só sem push.
     if (isRunningInExpoGo()) return;

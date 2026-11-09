@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
+import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
-import { Radii, Spacing } from '@/constants/theme';
+import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type PrimaryButtonProps = {
@@ -11,47 +12,42 @@ export type PrimaryButtonProps = {
   disabled?: boolean;
 };
 
-/** Ação principal da tela: preenchida com a cor da marca. Uma por tela. */
+/** Ação principal da tela: pílula grafite. Uma por tela. */
 export function PrimaryButton({ label, onPress, loading = false, disabled = false }: PrimaryButtonProps) {
   const theme = useTheme();
   const inativo = disabled || loading;
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
+      accessibilityState={{ disabled: inativo, busy: loading }}
       disabled={inativo}
       onPress={onPress}
-      style={[
-        styles.botao,
-        { backgroundColor: theme.brand, shadowColor: theme.shadow },
-        inativo && styles.inativo,
-      ]}>
+      style={[styles.botao, { backgroundColor: theme.action }, inativo && styles.inativo]}>
       {loading ? (
-        <ActivityIndicator color={theme.onBrand} />
+        <ActivityIndicator color={theme.onAction} />
       ) : (
-        <ThemedText type="smallBold" style={[styles.label, { color: theme.onBrand }]}>
-          {label}
-        </ThemedText>
+        <ThemedText style={[styles.label, { color: theme.onAction }]}>{label}</ThemedText>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   botao: {
-    minHeight: 50,
-    borderRadius: Radii.medium,
+    minHeight: 58,
+    borderRadius: Radii.pill,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOpacity: 0,
-    elevation: 0,
   },
   label: {
-    fontSize: 16,
+    fontSize: FontSize.body,
+    lineHeight: LineHeight.body,
+    fontWeight: 600,
   },
   inativo: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
 });

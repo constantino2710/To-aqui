@@ -1,17 +1,27 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  TextInput,
+  View,
+  type TextStyle,
+} from 'react-native';
 
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Fab } from '@/components/fab';
+import { IconButton } from '@/components/icon-button';
+import { PressableScale } from '@/components/pressable-scale';
 import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
+import { Section } from '@/components/section';
 import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
-import { Radii, Spacing } from '@/constants/theme';
+import { FontSize, JakartaFamilies, LineHeight, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { traduzErroBanco } from '@/lib/db-errors';
 import { supabase } from '@/lib/supabase';
@@ -97,70 +107,72 @@ export default function HomeScreen() {
       aoAtualizar={carregar}
       atualizando={carregando}
       fab={
-        <Fab
-          accessibilityLabel="Criar família"
-          onPress={() => router.push('/configurar-familia' as Href)}
-        />
+        familias.length > 0 ? (
+          <Fab
+            accessibilityLabel="Criar família"
+            onPress={() => router.push('/configurar-familia' as Href)}
+          />
+        ) : undefined
       }>
       <View style={styles.busca}>
-        <TextInput
-          placeholder="Digite o nome da família"
-          placeholderTextColor={theme.textSecondary}
-          value={busca}
-          onChangeText={setBusca}
-          returnKeyType="search"
-          onSubmitEditing={pesquisarFamilias}
-          style={[
-            styles.campoBusca,
-            {
-              backgroundColor: theme.backgroundElement,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Pesquisar famílias"
-          onPress={pesquisarFamilias}
-          style={[
-            styles.botaoBusca,
-            { backgroundColor: theme.brand },
-          ]}>
-          <Ionicons name="search" size={22} color={theme.onBrand} />
-        </Pressable>
+        <View style={[styles.campoBusca, { backgroundColor: theme.backgroundElement }]}>
+          <Ionicons name="search" size={20} color={theme.textSecondary} />
+          <TextInput
+            accessibilityLabel="Buscar família"
+            placeholder="Digite o nome da família"
+            placeholderTextColor={theme.textSecondary}
+            value={busca}
+            onChangeText={setBusca}
+            returnKeyType="search"
+            onSubmitEditing={pesquisarFamilias}
+            style={[styles.input, semAnelDoNavegador, { color: theme.text }]}
+          />
+        </View>
+        <IconButton icone="search" rotulo="Buscar" tamanho={56} onPress={pesquisarFamilias} />
       </View>
 
       {convites.length > 0 && (
-        <View style={styles.lista}>
-          <ThemedText type="smallBold">Convites para famílias</ThemedText>
+        <Section titulo="Convites para famílias">
           {convites.map((convite) => (
             <Card key={convite.invite_id}>
-              <ThemedText type="smallBold">{convite.group_name}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {convite.convidou} convidou você para participar.
-              </ThemedText>
+              <View style={styles.textos}>
+                <ThemedText style={styles.nome}>{convite.group_name}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {convite.convidou} convidou você para participar.
+                </ThemedText>
+              </View>
               <View style={styles.acoes}>
                 <View style={styles.acaoMetade}>
                   <SecondaryButton
                     label="Recusar"
                     tom="perigo"
+                    compacto
+                    bloco
                     disabled={respondendo === convite.invite_id}
                     onPress={() => responderConvite(convite.invite_id, false)}
                   />
                 </View>
                 <View style={styles.acaoMetade}>
-                  <SecondaryButton
-                    label="Aceitar"
-                    tom="marca"
-                    loading={respondendo === convite.invite_id}
+                  <PressableScale
+                    accessibilityRole="button"
+                    accessibilityLabel="Aceitar"
+                    accessibilityState={{ busy: respondendo === convite.invite_id }}
+                    disabled={respondendo === convite.invite_id}
                     onPress={() => responderConvite(convite.invite_id, true)}
-                  />
+                    style={[styles.aceitar, { backgroundColor: theme.action }]}>
+                    {respondendo === convite.invite_id ? (
+                      <ActivityIndicator color={theme.onAction} size="small" />
+                    ) : (
+                      <ThemedText style={[styles.aceitarTexto, { color: theme.onAction }]}>
+                        Aceitar
+                      </ThemedText>
+                    )}
+                  </PressableScale>
                 </View>
               </View>
             </Card>
           ))}
-        </View>
+        </Section>
       )}
 
       {!carregando && familias.length === 0 ? (
@@ -187,15 +199,16 @@ export default function HomeScreen() {
           {familiasVisiveis.map((familia) => (
             <Card
               key={familia.group_id}
+              style={{ padding: Spacing.three }}
               onPress={() =>
                 router.push(`/configurar-familia?id=${familia.group_id}` as Href)
               }>
               <View style={styles.linha}>
-                <View style={[styles.icone, { backgroundColor: theme.backgroundSelected }]}>
+                <View style={[styles.icone, { backgroundColor: theme.brandSoft }]}>
                   <Ionicons name="people" size={22} color={theme.brand} />
                 </View>
                 <View style={styles.textos}>
-                  <ThemedText type="smallBold">{familia.name}</ThemedText>
+                  <ThemedText style={styles.nome}>{familia.name}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     {familia.membros} {familia.membros === 1 ? 'membro' : 'membros'} · Você é{' '}
                     {familia.meu_papel}
@@ -211,41 +224,55 @@ export default function HomeScreen() {
   );
 }
 
+// No navegador, o <input> ganha um anel de foco próprio; a pílula já basta.
+const semAnelDoNavegador = (
+  Platform.OS === 'web' ? { outlineStyle: 'none', outlineWidth: 0 } : {}
+) as TextStyle;
+
 const styles = StyleSheet.create({
-  // O campo começa e termina nas bordas úteis da tela, independente do recuo
-  // aplicado aos demais conteúdos da página.
-  busca: {
-    alignSelf: 'stretch',
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
+  busca: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   campoBusca: {
     flex: 1,
-    height: 48,
-    borderRadius: Radii.medium,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.three,
-    fontSize: 16,
-  },
-  botaoBusca: {
-    width: 48,
-    height: 48,
-    borderRadius: Radii.medium,
+    minWidth: 0,
+    height: 56,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radii.pill,
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: JakartaFamilies[500],
+    fontSize: FontSize.body,
+    lineHeight: LineHeight.body,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   lista: { gap: Spacing.two },
   linha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   icone: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: Radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   textos: { flex: 1, gap: Spacing.half },
+  nome: { fontWeight: 700 },
   acoes: { flexDirection: 'row', gap: Spacing.two },
   acaoMetade: { flex: 1 },
+  // Mesma pílula do ActionPill, mas esticada até a metade do cartão.
+  aceitar: {
+    height: 48,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aceitarTexto: {
+    fontSize: FontSize.small,
+    lineHeight: LineHeight.small,
+    fontWeight: 700,
+  },
 });

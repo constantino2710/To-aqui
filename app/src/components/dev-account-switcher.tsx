@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -39,6 +39,28 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [semeando, setSemeando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // 0 = fechada, 1 = aberta. O fundo usa como opacidade e a folha como deslocamento.
+  const [progresso] = useState(() => new Animated.Value(0));
+  const [alturaFolha, setAlturaFolha] = useState(600);
+
+  function abrir() {
+    setAberto(true);
+    Animated.timing(progresso, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }
+
+  function fechar() {
+    Animated.timing(progresso, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(() => setAberto(false));
+  }
 
   useEffect(() => {
     let vivo = true;
@@ -72,7 +94,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
 
   async function trocar(a: SavedAccount) {
     if (ehAtiva(a)) {
-      setAberto(false);
+      fechar();
       return;
     }
     setOcupado(a.userId);
@@ -86,7 +108,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
       setErro(`${a.username ?? a.email}: a sessão expirou. Remova e entre de novo.`);
       return;
     }
-    setAberto(false);
+    fechar();
     aposTrocar?.();
   }
 
@@ -94,7 +116,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
     setErro(null);
     // Logout só local: não revoga o token no servidor, então dá para voltar.
     await supabase.auth.signOut({ scope: 'local' });
-    setAberto(false);
+    fechar();
   }
 
   async function semearTeste() {
@@ -145,16 +167,18 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
     <>
       <Pressable
         accessibilityRole="button"
-        onPress={() => setAberto(true)}
-        style={[styles.trigger, { borderColor: theme.border }]}>
+        onPress={abrir}
+        style={[styles.trigger, { backgroundColor: theme.backgroundElement }]}>
         {contaAtual ? (
           <Avatar
             nome={nomeConta(contaAtual)}
             semente={contaAtual.userId}
-            tamanho={32}
+            tamanho={40}
           />
         ) : (
-          <Ionicons name="people-circle-outline" size={22} color={theme.textSecondary} />
+          <View style={[styles.triggerIcone, { backgroundColor: theme.background }]}>
+            <Ionicons name="people-outline" size={18} color={theme.text} />
+          </View>
         )}
         <View style={styles.triggerTextos}>
           <ThemedText type="smallBold">
@@ -166,12 +190,32 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
             </ThemedText>
           )}
         </View>
-        <Ionicons name="swap-horizontal" size={20} color={theme.textSecondary} />
+        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} style={styles.triggerSeta} />
       </Pressable>
 
-      <Modal visible={aberto} transparent animationType="slide" onRequestClose={() => setAberto(false)}>
-        <Pressable style={[styles.backdrop, { backgroundColor: theme.overlay }]} onPress={() => setAberto(false)}>
-          <Pressable onPress={() => {}}>
+      <Modal visible={aberto} transparent animationType="none" onRequestClose={fechar}>
+        <View style={styles.backdrop}>
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay, opacity: progresso }]}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={fechar}
+              accessibilityRole="button"
+              accessibilityLabel="Fechar"
+            />
+          </Animated.View>
+          <Animated.View
+            onLayout={(e) => setAlturaFolha(e.nativeEvent.layout.height)}
+            style={{
+              transform: [
+                {
+                  translateY: progresso.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [alturaFolha, 0],
+                  }),
+                },
+              ],
+            }}>
             <ThemedView
               type="backgroundElement"
               style={[styles.folha, { paddingBottom: Math.max(insets.bottom, Spacing.four) }]}>
@@ -257,8 +301,8 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                 </Pressable>
               )}
             </ThemedView>
-          </Pressable>
-        </Pressable>
+          </Animated.View>
+        </View>
       </Modal>
     </>
   );
@@ -266,13 +310,23 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
 
 const styles = StyleSheet.create({
   trigger: {
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    borderWidth: 1,
-    borderRadius: Radii.large,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radii.pill,
+  },
+  triggerIcone: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  triggerSeta: {
+    marginRight: Spacing.two,
   },
   triggerTextos: {
     flex: 1,
