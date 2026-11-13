@@ -1,7 +1,6 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
+import { Icone, type NomeIcone } from '@/components/icone';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
@@ -14,14 +13,15 @@ export type ActionPillProps = {
    * - `escuro`: preenchido grafite (Adicionar, Aceitar, Convidar)
    * - `contorno`: só contorno grafite (Editar)
    * - `suave`: verde suave (Selecionado)
-   * - `translucido`: branco translúcido, para cartões escuros (Copiar)
    */
-  variante?: 'escuro' | 'contorno' | 'suave' | 'translucido';
-  icone?: ComponentProps<typeof Ionicons>['name'];
+  variante?: 'escuro' | 'contorno' | 'suave';
+  icone?: NomeIcone;
   loading?: boolean;
   disabled?: boolean;
   /** 48 (padrão, dentro de linhas de pessoa) ou 44 (ao lado de títulos). */
   altura?: 44 | 48;
+  /** Largura fixa, para o botão não mudar de tamanho quando o rótulo troca. */
+  largura?: number;
   accessibilityLabel?: string;
 };
 
@@ -37,6 +37,7 @@ export function ActionPill({
   loading = false,
   disabled = false,
   altura = 48,
+  largura,
   accessibilityLabel,
 }: ActionPillProps) {
   const theme = useTheme();
@@ -47,17 +48,13 @@ export function ActionPill({
       ? theme.action
       : variante === 'suave'
         ? theme.brandSoft
-        : variante === 'translucido'
-          ? 'rgba(255, 255, 255, 0.14)'
-          : 'transparent';
+        : 'transparent';
   const cor =
     variante === 'escuro'
       ? theme.onAction
       : variante === 'suave'
         ? theme.brand
-        : variante === 'translucido'
-          ? '#FFFFFF'
-          : theme.action;
+        : theme.action;
 
   return (
     <PressableScale
@@ -70,14 +67,16 @@ export function ActionPill({
       style={[
         styles.pilula,
         { height: altura, backgroundColor: fundo },
-        variante === 'contorno' && { borderWidth: 1.5, borderColor: theme.action },
+        largura != null && { width: largura, paddingHorizontal: 0, justifyContent: 'center' },
+        // Contorno suave (o mesmo dos botões redondos): o texto grafite já dá o peso.
+        variante === 'contorno' && { borderWidth: 1.5, borderColor: theme.border },
         inativo && styles.inativo,
       ]}>
       {loading ? (
         <ActivityIndicator color={cor} size="small" />
       ) : (
         <>
-          {icone && <Ionicons name={icone} size={18} color={cor} />}
+          {icone && <Icone nome={icone} tamanho={18} cor={cor} />}
           <ThemedText style={[styles.texto, { color: cor }]}>{label}</ThemedText>
         </>
       )}

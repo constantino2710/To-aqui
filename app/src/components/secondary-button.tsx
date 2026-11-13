@@ -46,7 +46,8 @@ export function SecondaryButton({
       style={[
         styles.botao,
         compacto ? styles.compacto : styles.normal,
-        { borderColor: cor },
+        // Neutro: contorno suave (token `border`); marca e perigo mantêm a cor, que tem significado.
+        { borderColor: tom === 'neutro' ? theme.border : cor },
         inativo && styles.inativo,
       ]}>
       {loading ? (

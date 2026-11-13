@@ -62,11 +62,17 @@ export default {
           '0%, 100%': { transform: 'scale(1)', opacity: '1' },
           '50%': { transform: 'scale(1.08)', opacity: '0.6' },
         },
+        // Ondas do radar: crescem um pouco e esmaecem, sem quicar.
+        onda: {
+          '0%, 100%': { transform: 'scale(0.96)' },
+          '50%': { transform: 'scale(1.06)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 360ms cubic-bezier(0.22,1,0.36,1) both',
         'fade-in': 'fade-in 260ms ease-out both',
         'pulse-ring': 'pulse-ring 3.2s ease-in-out infinite',
+        onda: 'onda 3.6s ease-in-out infinite',
       },
     },
   },

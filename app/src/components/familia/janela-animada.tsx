@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 
+import { FundoCartao, sombraCartao } from '@/components/card';
 import { Motion } from '@/constants/motion';
 import { Radii, Spacing } from '@/constants/theme';
 import { useMovimentoReduzido } from '@/hooks/use-movimento-reduzido';
 import { useTheme } from '@/hooks/use-theme';
+import { soltarFocoDevolvido } from '@/lib/foco-web';
 
 export type JanelaAnimadaProps = {
   visivel: boolean;
@@ -40,14 +42,18 @@ export function JanelaAnimada({ visivel, onFechar, fecharAoTocarFora = true, est
       useNativeDriver: Platform.OS !== 'web',
     });
     animacao.start(({ finished }) => {
-      if (finished && !abrindo) setMontado(false);
+      if (finished && !abrindo) {
+        setMontado(false);
+        soltarFocoDevolvido();
+      }
     });
     return () => animacao.stop();
   }, [visivel, montado, reduzido, progresso]);
 
   return (
     <Modal visible={montado} transparent animationType="none" statusBarTranslucent onRequestClose={onFechar}>
-      <View style={styles.raiz}>
+      {/* Com campo na janela, o teclado empurra o cartão para cima em vez de cobri-lo. */}
+      <KeyboardAvoidingView style={styles.raiz} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Animated.View
           style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay, opacity: progresso }]}>
           {fecharAoTocarFora && <Pressable accessible={false} style={StyleSheet.absoluteFill} onPress={onFechar} />}
@@ -55,6 +61,7 @@ export function JanelaAnimada({ visivel, onFechar, fecharAoTocarFora = true, est
         <Animated.View
           style={[
             styles.cartao,
+            sombraCartao(theme.shadow),
             { backgroundColor: theme.backgroundElement, opacity: progresso },
             estilo,
             {
@@ -64,9 +71,10 @@ export function JanelaAnimada({ visivel, onFechar, fecharAoTocarFora = true, est
               ],
             },
           ]}>
+          <FundoCartao />
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -82,6 +90,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 440,
     borderRadius: Radii.huge,
+    overflow: 'hidden',
     padding: Spacing.four,
     gap: Spacing.three,
   },

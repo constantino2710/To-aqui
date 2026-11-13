@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { FundoCartao, sombraCartao } from '@/components/card';
 import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
 import { EscalaToque } from '@/constants/motion';
@@ -42,7 +43,8 @@ export function PersonRow({
   const theme = useTheme();
 
   const linha = (
-    <View style={[styles.linha, { backgroundColor: theme.backgroundElement }]}>
+    <View style={[styles.linha, sombraCartao(theme.shadow), { backgroundColor: theme.backgroundElement }]}>
+      <FundoCartao />
       <Avatar nome={nome} semente={semente} tamanho={48} />
 
       <View style={styles.textos}>
@@ -77,6 +79,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.two,
     borderRadius: Radii.pill,
+    overflow: 'hidden',
   },
   textos: {
     flex: 1,

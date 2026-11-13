@@ -1,0 +1,80 @@
+-- ===========================================================================
+-- PROPOSTA (em revisão) — feed "Atividade recente" da tela Comunidade.
+--
+-- Fica FORA de supabase/migrations de propósito: o `supabase db push` registra
+-- toda migration como aplicada, mesmo comentada, e ela nunca mais rodaria
+-- depois de descomentada.
+--
+-- Para ativar, depois da revisão:
+--   1. Copie este arquivo para supabase/migrations/<timestamp>_community_activity.sql
+--      e remova os comentários do SQL abaixo.
+--   2. Aplique (`supabase db push`).
+--   3. No app, ligue ATIVIDADE_RECENTE_HABILITADA em src/app/(app)/comunidade.tsx.
+-- ===========================================================================
+
+-- -- Atividade recente da Comunidade: um feed curto do que aconteceu ao redor de
+-- -- quem está logado. Junta três fontes que já existem, sem tabela nova:
+-- --
+-- --   * entrada_familia : alguém entrou numa família da qual eu participo
+-- --   * novo_qr         : um QR Code foi cadastrado numa família minha
+-- --   * nova_amizade    : uma amizade minha foi aceita
+-- --
+-- -- Roda como o próprio usuário (security invoker), então o RLS das tabelas
+-- -- continua valendo; os filtros por auth.uid() abaixo deixam explícito o recorte.
+--
+-- create or replace function public.list_community_activity(p_limit int default 20)
+-- returns table (
+--   tipo          text,
+--   ocorrido_em   timestamptz,
+--   ator_id       uuid,
+--   ator_nome     text,
+--   ator_username text,
+--   grupo_id      uuid,
+--   grupo_nome    text,
+--   detalhe       text
+-- )
+-- language sql
+-- stable
+-- set search_path = ''
+-- as $$
+--   with eu as (select (select auth.uid()) as id),
+--   minhas_familias as (
+--     select m.group_id
+--       from public.group_members m, eu
+--      where m.user_id = eu.id
+--   )
+--   select * from (
+--     -- Alguém (inclusive eu) entrou numa das minhas famílias.
+--     select 'entrada_familia'::text, m.joined_at, p.id, p.full_name, p.username, g.id, g.name, null::text
+--       from public.group_members m
+--       join minhas_familias mf on mf.group_id = m.group_id
+--       join public.groups g on g.id = m.group_id
+--       join public.profiles p on p.id = m.user_id
+--
+--     union all
+--
+--     -- QR Code novo numa das minhas famílias (o ator pode ter sido apagado).
+--     select 'novo_qr'::text, q.created_at, p.id, p.full_name, p.username, g.id, g.name, q.dependent_name
+--       from public.qr_codes q
+--       join minhas_familias mf on mf.group_id = q.group_id
+--       join public.groups g on g.id = q.group_id
+--       left join public.profiles p on p.id = q.created_by
+--
+--     union all
+--
+--     -- Amizade aceita: o "ator" é sempre a outra pessoa.
+--     select 'nova_amizade'::text, f.responded_at, p.id, p.full_name, p.username, null::uuid, null::text, null::text
+--       from eu
+--       join public.friendships f
+--         on eu.id in (f.requester_id, f.addressee_id)
+--       join public.profiles p
+--         on p.id = case when f.requester_id = eu.id then f.addressee_id else f.requester_id end
+--      where f.status = 'aceito'
+--        and f.responded_at is not null
+--   ) atividade (tipo, ocorrido_em, ator_id, ator_nome, ator_username, grupo_id, grupo_nome, detalhe)
+--   order by ocorrido_em desc
+--   limit least(greatest(coalesce(p_limit, 20), 1), 50);
+-- $$;
+--
+-- revoke execute on function public.list_community_activity(int) from public, anon;
+-- grant execute on function public.list_community_activity(int) to authenticated;

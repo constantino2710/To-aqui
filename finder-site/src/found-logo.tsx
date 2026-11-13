@@ -18,11 +18,20 @@ export function FoundMark({ size = 40 }: { size?: number }) {
   );
 }
 
-export function FoundLogo() {
+/** Símbolo + nome. O nome acompanha o tamanho do símbolo (logotipo, fora da escala de texto). */
+export function FoundLogo({ size = 40 }: { size?: number }) {
   return (
-    <div role="img" aria-label="Found" className="flex items-center gap-2">
-      <FoundMark />
-      <span aria-hidden="true" className="text-[22px] font-extrabold leading-7 tracking-[-0.05em]">
+    <div role="img" aria-label="Found" className="flex items-center" style={{ gap: size * 0.25 }}>
+      {/* Contorno fino + sombra: no tema escuro o quadrado grafite se perderia no fundo. */}
+      <span
+        className="shrink-0 shadow-[0_8px_20px_-6px_hsl(var(--shadow))] ring-1 ring-border"
+        style={{ borderRadius: size * (14 / 48), lineHeight: 0 }}>
+        <FoundMark size={size} />
+      </span>
+      <span
+        aria-hidden="true"
+        className="font-extrabold tracking-[-0.05em]"
+        style={{ fontSize: size * 0.62, lineHeight: `${size * 0.75}px` }}>
         found
       </span>
     </div>

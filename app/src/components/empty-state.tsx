@@ -1,13 +1,13 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { Icone, type NomeIcone } from '@/components/icone';
 import { ThemedText } from '@/components/themed-text';
 import { Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type EmptyStateProps = {
-  icone: ComponentProps<typeof Ionicons>['name'];
+  icone: NomeIcone;
   titulo: string;
   descricao: string;
   /** Botão de saída: um estado vazio sem caminho adiante é um beco sem saída. */
@@ -21,7 +21,7 @@ export function EmptyState({ icone, titulo, descricao, acao }: EmptyStateProps) 
     <View style={styles.container}>
       <View style={[styles.circulo, { backgroundColor: theme.brandSoft }]}>
         <View style={[styles.anel, { borderColor: theme.gradientFrom }]} />
-        <Ionicons name={icone} size={48} color={theme.brand} />
+        <Icone nome={icone} tamanho={48} cor={theme.brand} />
       </View>
       <View style={styles.textos}>
         <ThemedText type="large" style={styles.titulo}>

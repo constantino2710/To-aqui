@@ -1,7 +1,7 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { Icone, type NomeIcone } from '@/components/icone';
 import { ThemedText } from '@/components/themed-text';
 import { Motion } from '@/constants/motion';
 import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
@@ -11,7 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 export type SegmentedTabsOpcao<T extends string> = {
   chave: T;
   rotulo: string;
-  icone: ComponentProps<typeof Ionicons>['name'];
+  icone: NomeIcone;
 };
 
 export type SegmentedTabsProps<T extends string> = {
@@ -63,6 +63,7 @@ export function SegmentedTabs<T extends string>({ opcoes, valor, onChange }: Seg
           {
             width: larguraOpcao,
             backgroundColor: theme.backgroundElement,
+            boxShadow: `0 2px 8px ${theme.shadow}`,
             transform: [{ translateX: pos.interpolate({ inputRange: [0, 1], outputRange: [0, larguraOpcao] }) }],
           },
         ]}
@@ -76,7 +77,7 @@ export function SegmentedTabs<T extends string>({ opcoes, valor, onChange }: Seg
             accessibilityState={{ selected: ativa }}
             onPress={() => onChange(opcao.chave)}
             style={styles.opcao}>
-            <Ionicons name={opcao.icone} size={18} color={ativa ? theme.brand : theme.textSecondary} />
+            <Icone nome={opcao.icone} tamanho={18} cor={ativa ? theme.brand : theme.textSecondary} />
             <ThemedText
               style={[
                 styles.rotulo,
@@ -103,7 +104,6 @@ const styles = StyleSheet.create({
     left: Spacing.one,
     height: 48,
     borderRadius: Radii.pill,
-    boxShadow: '0 2px 8px rgba(30, 35, 32, 0.08)',
   },
   opcao: {
     flex: 1,

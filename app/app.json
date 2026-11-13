@@ -11,6 +11,7 @@
       "icon": "./assets/images/found-app-icon-v2.png"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#F1F2F0",
         "foregroundImage": "./assets/images/found-logo-v2.png",

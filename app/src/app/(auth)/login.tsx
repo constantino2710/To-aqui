@@ -1,10 +1,11 @@
 import { Link } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevAccountSwitcher } from '@/components/dev-account-switcher';
 import { IconField } from '@/components/icon-field';
+import { useIndicadorRolagem } from '@/components/indicador-rolagem';
 import { LocationHero } from '@/components/location-hero';
 import { PrimaryButton } from '@/components/primary-button';
 import { ThemedText } from '@/components/themed-text';
@@ -16,7 +17,9 @@ import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const { confirmError } = useAuth();
+  const { propsRolagem, indicador } = useIndicadorRolagem();
   const [email, setEmail] = useState('');
+  const campoSenha = useRef<TextInput>(null);
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -43,10 +46,15 @@ export default function LoginScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* iOS: a rolagem abre espaço para o teclado e mostra o campo em foco.
+            Android: a janela encolhe (softwareKeyboardLayoutMode: resize). */}
+        <View style={styles.container}>
+          <ScrollView
+            {...propsRolagem}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive">
             <View style={styles.content}>
               <LocationHero marca />
 
@@ -66,7 +74,7 @@ export default function LoginScreen() {
               <View style={styles.formulario}>
                 <IconField
                   label="E-mail"
-                  icon="mail-outline"
+                  icon="mail"
                   value={email}
                   onChangeText={setEmail}
                   placeholder="voce@exemplo.com"
@@ -76,11 +84,13 @@ export default function LoginScreen() {
                   inputMode="email"
                   textContentType="emailAddress"
                   returnKeyType="next"
+                  onSubmitEditing={() => campoSenha.current?.focus()}
                 />
 
                 <IconField
+                  ref={campoSenha}
                   label="Senha"
-                  icon="lock-closed-outline"
+                  icon="lock"
                   value={senha}
                   onChangeText={setSenha}
                   placeholder="••••••••"
@@ -119,7 +129,8 @@ export default function LoginScreen() {
               <DevAccountSwitcher label="Trocar de conta (teste)" />
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+          {indicador}
+        </View>
       </SafeAreaView>
     </ThemedView>
   );

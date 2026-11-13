@@ -1,13 +1,14 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icone } from '@/components/icone';
 import { Card } from '@/components/card';
 import { Entrada } from '@/components/entrada';
 import { FoundLogo } from '@/components/found-logo';
 import { IconField, type IconFieldStatus } from '@/components/icon-field';
+import { useIndicadorRolagem } from '@/components/indicador-rolagem';
 import { PrimaryButton } from '@/components/primary-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -32,7 +33,13 @@ type StatusUsername = 'vazio' | 'invalido' | 'checando' | 'livre' | 'ocupado' | 
 
 export default function SignupScreen() {
   const theme = useTheme();
+  const { propsRolagem, indicador: indicadorRolagem } = useIndicadorRolagem();
   const [nomeCompleto, setNomeCompleto] = useState('');
+  // "Próximo" no teclado leva de um campo ao outro.
+  const campoUsername = useRef<TextInput>(null);
+  const campoTelefone = useRef<TextInput>(null);
+  const campoEmail = useRef<TextInput>(null);
+  const campoSenha = useRef<TextInput>(null);
   const [username, setUsername] = useState('');
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
@@ -148,7 +155,7 @@ export default function SignupScreen() {
               <Entrada indice={0}>
                 <Card style={styles.cartaoEmail}>
                   <View style={[styles.circulo, { backgroundColor: theme.brandSoft }]}>
-                    <Ionicons name="mail-outline" size={40} color={theme.brand} />
+                    <Icone nome="mail" tamanho={40} cor={theme.brand} />
                   </View>
 
                   <View style={styles.titulos}>
@@ -163,11 +170,11 @@ export default function SignupScreen() {
                   </View>
 
                   <View style={[styles.dica, { backgroundColor: theme.background }]}>
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={20}
-                      color={theme.brand}
-                      style={styles.dicaIcone}
+                    <Icone
+                      nome="info"
+                      tamanho={20}
+                      cor={theme.brand}
+                      estilo={styles.dicaIcone}
                     />
                     <ThemedText type="small" themeColor="textSecondary" style={styles.dicaTexto}>
                       Se abrir o link neste mesmo aparelho, o app entra sozinho. Caso contrário,
@@ -180,7 +187,7 @@ export default function SignupScreen() {
               <Entrada indice={1}>
                 <Link href="/login" asChild>
                   <View accessibilityRole="link" style={styles.voltar}>
-                    <Ionicons name="arrow-back" size={18} color={theme.brand} />
+                    <Icone nome="arrow-left" tamanho={18} cor={theme.brand} />
                     <ThemedText type="linkPrimary">Voltar para o login</ThemedText>
                   </View>
                 </Link>
@@ -206,10 +213,15 @@ export default function SignupScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.safeArea}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* iOS: a rolagem abre espaço para o teclado e mostra o campo em foco.
+            Android: a janela encolhe (softwareKeyboardLayoutMode: resize). */}
+        <View style={styles.safeArea}>
+          <ScrollView
+            {...propsRolagem}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive">
             <View style={styles.content}>
               <Entrada indice={0}>
                 <FoundLogo size={40} />
@@ -229,7 +241,7 @@ export default function SignupScreen() {
                 <View style={styles.formulario}>
                   <IconField
                     label="Nome completo"
-                    icon="person-outline"
+                    icon="user"
                     value={nomeCompleto}
                     onChangeText={setNomeCompleto}
                     placeholder="Como você quer ser chamado"
@@ -237,11 +249,14 @@ export default function SignupScreen() {
                     autoComplete="name"
                     textContentType="name"
                     maxLength={80}
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoUsername.current?.focus()}
                   />
 
                   <IconField
+                    ref={campoUsername}
                     label="Nome de usuário"
-                    icon="at-outline"
+                    icon="at-sign"
                     value={username}
                     onChangeText={setUsername}
                     placeholder="joao.silva"
@@ -251,6 +266,8 @@ export default function SignupScreen() {
                     textContentType="username"
                     maxLength={30}
                     status={seloUsername}
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoTelefone.current?.focus()}
                   />
                   {statusUsername === 'invalido' && (
                     <ThemedText type="small" themeColor="danger" style={styles.recuo}>
@@ -259,8 +276,9 @@ export default function SignupScreen() {
                   )}
 
                   <IconField
+                    ref={campoTelefone}
                     label="Telefone"
-                    icon="call-outline"
+                    icon="phone"
                     value={telefone}
                     onChangeText={(texto) => setTelefone(formatarTelefone(texto))}
                     placeholder="(81) 99999-8888"
@@ -269,11 +287,14 @@ export default function SignupScreen() {
                     inputMode="tel"
                     textContentType="telephoneNumber"
                     maxLength={16}
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoEmail.current?.focus()}
                   />
 
                   <IconField
+                    ref={campoEmail}
                     label="E-mail"
-                    icon="mail-outline"
+                    icon="mail"
                     value={email}
                     onChangeText={setEmail}
                     placeholder="voce@exemplo.com"
@@ -282,11 +303,14 @@ export default function SignupScreen() {
                     keyboardType="email-address"
                     inputMode="email"
                     textContentType="emailAddress"
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoSenha.current?.focus()}
                   />
 
                   <IconField
+                    ref={campoSenha}
                     label="Senha"
-                    icon="lock-closed-outline"
+                    icon="lock"
                     value={senha}
                     onChangeText={setSenha}
                     placeholder={`Mínimo de ${MINIMO_SENHA} caracteres`}
@@ -329,7 +353,8 @@ export default function SignupScreen() {
               </Entrada>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+          {indicadorRolagem}
+        </View>
       </SafeAreaView>
     </ThemedView>
   );

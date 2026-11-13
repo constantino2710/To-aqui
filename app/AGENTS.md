@@ -11,7 +11,9 @@ Resumo para este app:
 - **Paleta Sálvia**: neutros esverdeados, ações em grafite e degradê
   verde-água → verde só para localização, "ao vivo" e confirmações. Claro é o
   padrão (há tema escuro). Tudo em pílulas e cartões de cantos grandes, sem
-  bordas nem sombras pesadas, muito espaço em branco. Fonte **Plus Jakarta Sans**.
+  bordas, com degradê quase imperceptível e sombra leve (`Card`,
+  `FundoCartao`, `sombraCartao`), muito espaço em branco. Fonte **Plus Jakarta
+  Sans**. Ícones só **Feather**, sempre pelo componente `Icone`.
 - **Escala e espaço:** texto só em 14/16/18 (títulos 28/40) via `FontSize` e
   `LineHeight`; espaçamento em grade de 8 via `Spacing` — nunca `Spacing.x + n`.
   Linhas de pessoa são pílulas de 64 com folga de 8; alvos de toque ≥ 44.
@@ -19,7 +21,8 @@ Resumo para este app:
   `src/constants/motion.ts`, `PressableScale` para tocáveis, `Entrada` para
   blocos que aparecem (o `Screen` já faz isso) e respeite
   `useMovimentoReduzido`. Valores animados: `useState(() => new Animated.Value(0))`
-  (o React Compiler não aceita `useRef(...).current` no render).
+  (o React Compiler não aceita `useRef(...).current` no render). Na web, não use
+  `entering` do Reanimated (deixa o bloco absoluto); o `Entrada` já tem versão web.
 - **Componentes:** [react-native-reusables](https://reactnativereusables.com)
   sobre **NativeWind** (Tailwind no React Native). Novos componentes entram em
   `src/components/ui/`, estilizados com classes NativeWind. O shadcn/ui não roda

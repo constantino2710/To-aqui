@@ -1,9 +1,10 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icone } from '@/components/icone';
 import { Avatar } from '@/components/avatar';
+import { FundoCartao, sombraCartao } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radii, Spacing } from '@/constants/theme';
@@ -15,6 +16,7 @@ import {
   subscribeSavedAccounts,
   upsertSavedAccount,
 } from '@/lib/saved-accounts';
+import { soltarFocoDevolvido } from '@/lib/foco-web';
 import { supabase } from '@/lib/supabase';
 
 export type DevAccountSwitcherProps = {
@@ -59,7 +61,10 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
       duration: 220,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: Platform.OS !== 'web',
-    }).start(() => setAberto(false));
+    }).start(() => {
+      setAberto(false);
+      soltarFocoDevolvido();
+    });
   }
 
   useEffect(() => {
@@ -168,7 +173,8 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
       <Pressable
         accessibilityRole="button"
         onPress={abrir}
-        style={[styles.trigger, { backgroundColor: theme.backgroundElement }]}>
+        style={[styles.trigger, sombraCartao(theme.shadow), { backgroundColor: theme.backgroundElement }]}>
+        <FundoCartao />
         {contaAtual ? (
           <Avatar
             nome={nomeConta(contaAtual)}
@@ -177,7 +183,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
           />
         ) : (
           <View style={[styles.triggerIcone, { backgroundColor: theme.background }]}>
-            <Ionicons name="people-outline" size={18} color={theme.text} />
+            <Icone nome="users" tamanho={18} cor={theme.text} />
           </View>
         )}
         <View style={styles.triggerTextos}>
@@ -190,10 +196,10 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
             </ThemedText>
           )}
         </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} style={styles.triggerSeta} />
+        <Icone nome="chevron-right" tamanho={18} cor={theme.textSecondary} estilo={styles.triggerSeta} />
       </Pressable>
 
-      <Modal visible={aberto} transparent animationType="none" onRequestClose={fechar}>
+      <Modal visible={aberto} transparent animationType="none" statusBarTranslucent onRequestClose={fechar}>
         <View style={styles.backdrop}>
           <Animated.View
             style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay, opacity: progresso }]}>
@@ -218,8 +224,9 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
             }}>
             <ThemedView
               type="backgroundElement"
-              style={[styles.folha, { paddingBottom: Math.max(insets.bottom, Spacing.four) }]}>
-              <View style={styles.puxador} />
+              style={[styles.folha, sombraCartao(theme.shadow), { paddingBottom: Math.max(insets.bottom, Spacing.four) }]}>
+              <FundoCartao />
+              <View style={[styles.puxador, { backgroundColor: theme.border }]} />
               <View style={styles.titulos}>
                 <ThemedText type="subtitle">Trocar de conta</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
@@ -243,12 +250,9 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                       onPress={() => trocar(a)}
                       style={[
                         styles.item,
-                        {
-                          borderColor: ativa ? theme.brand : theme.border,
-                          backgroundColor: ativa ? theme.backgroundSelected : 'transparent',
-                        },
+                        { backgroundColor: ativa ? theme.brandSoft : theme.backgroundSelected },
                       ]}>
-                      <Avatar nome={nomeConta(a)} semente={a.userId} tamanho={42} />
+                      <Avatar nome={nomeConta(a)} semente={a.userId} tamanho={48} />
                       <View style={styles.itemTextos}>
                         <ThemedText type="smallBold">{nomeConta(a)}</ThemedText>
                         <ThemedText type="small" themeColor="textSecondary">
@@ -258,9 +262,9 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                       {ocupado === a.userId ? (
                         <ActivityIndicator color={theme.brand} />
                       ) : ativa ? (
-                        <Ionicons name="checkmark-circle" size={22} color={theme.brand} />
+                        <Icone nome="check-circle" tamanho={22} cor={theme.brand} />
                       ) : (
-                        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                        <Icone nome="chevron-right" tamanho={18} cor={theme.textSecondary} />
                       )}
                     </Pressable>
                   );
@@ -278,7 +282,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                 disabled={ocupado !== null || semeando}
                 onPress={adicionar}
                 style={styles.acao}>
-                <Ionicons name="add-circle-outline" size={20} color={theme.brand} />
+                <Icone nome="plus-circle" tamanho={20} cor={theme.brand} />
                 <ThemedText type="smallBold" style={{ color: theme.brand }}>
                   Adicionar outra conta
                 </ThemedText>
@@ -293,7 +297,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                   {semeando ? (
                     <ActivityIndicator color={theme.textSecondary} />
                   ) : (
-                    <Ionicons name="flash-outline" size={20} color={theme.textSecondary} />
+                    <Icone nome="zap" tamanho={20} cor={theme.textSecondary} />
                   )}
                   <ThemedText type="smallBold" themeColor="textSecondary">
                     {semeando ? 'Entrando nas contas de teste…' : `Salvar ${naoSalvas.length} contas de teste`}
@@ -317,6 +321,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.two,
     borderRadius: Radii.pill,
+    overflow: 'hidden',
   },
   triggerIcone: {
     width: 40,
@@ -340,6 +345,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopLeftRadius: Radii.extraLarge,
     borderTopRightRadius: Radii.extraLarge,
+    overflow: 'hidden',
     padding: Spacing.four,
     gap: Spacing.three,
   },
@@ -348,7 +354,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: Radii.pill,
-    backgroundColor: 'rgba(127,127,127,0.4)',
   },
   titulos: {
     gap: Spacing.one,
@@ -359,13 +364,13 @@ const styles = StyleSheet.create({
   },
   item: {
     width: '100%',
-    minHeight: 68,
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
-    borderWidth: 1,
-    borderRadius: Radii.large,
+    padding: Spacing.two,
+    paddingRight: Spacing.three,
+    borderRadius: Radii.pill,
   },
   itemTextos: {
     flex: 1,

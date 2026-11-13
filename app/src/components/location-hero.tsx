@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Stop } from 'react-native-svg';
 
+import { sombraCartao } from '@/components/card';
 import { FoundMark } from '@/components/found-logo';
 import { ThemedText } from '@/components/themed-text';
 import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
@@ -36,16 +37,14 @@ export function LocationHero({ selo = 'Localização consentida', marca = false 
 
   return (
     <View
-      style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-      accessibilityElementsHidden={!marca}
-      importantForAccessibility={marca ? 'auto' : 'no-hide-descendants'}>
+      style={[styles.card, sombraCartao(theme.shadow), { backgroundColor: theme.backgroundElement }]}
+      aria-hidden={!marca}>
       <Svg
         width="100%"
         height="100%"
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         style={StyleSheet.absoluteFill}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants">
+        aria-hidden>
         <Defs>
           <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor={theme.gradientFrom} />

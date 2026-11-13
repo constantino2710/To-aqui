@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Animated,
   PanResponder,
@@ -19,8 +18,12 @@ import {
 } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icone } from '@/components/icone';
+import { FundoCartao, sombraCartao } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
+import { Motion } from '@/constants/motion';
 import { Radii, Spacing } from '@/constants/theme';
+import { useMovimentoReduzido } from '@/hooks/use-movimento-reduzido';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ToastTone = 'sucesso' | 'erro' | 'aviso' | 'info';
@@ -70,6 +73,7 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const reduzido = useMovimentoReduzido();
   const [translateX] = useState(() => new Animated.Value(0));
   const [translateY] = useState(() => new Animated.Value(-120));
   const [opacity] = useState(() => new Animated.Value(0));
@@ -107,16 +111,18 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
             fechar(movimento.dx < 0 ? -1 : 1);
             return;
           }
-          Animated.spring(translateX, {
+          Animated.timing(translateX, {
             toValue: 0,
-            damping: 18,
-            stiffness: 220,
+            duration: Motion.base,
+            easing: Motion.suave,
             useNativeDriver: true,
           }).start();
         },
         onPanResponderTerminate: () => {
-          Animated.spring(translateX, {
+          Animated.timing(translateX, {
             toValue: 0,
+            duration: Motion.base,
+            easing: Motion.suave,
             useNativeDriver: true,
           }).start();
         },
@@ -128,20 +134,22 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
     if (!toast) return;
 
     translateX.setValue(0);
-    translateY.setValue(-120);
+    translateY.setValue(reduzido ? 0 : -24);
     opacity.setValue(0);
     progresso.setValue(1);
 
+    // Entra descendo um pouco e "pousando", sem quicar.
     Animated.parallel([
-      Animated.spring(translateY, {
+      Animated.timing(translateY, {
         toValue: 0,
-        damping: 18,
-        stiffness: 240,
+        duration: reduzido ? 0 : Motion.lento,
+        easing: Motion.suave,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 160,
+        duration: reduzido ? 0 : Motion.base,
+        easing: Motion.suave,
         useNativeDriver: true,
       }),
     ]).start();
@@ -156,7 +164,7 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
     });
 
     return () => temporizador.stop();
-  }, [fechar, opacity, progresso, toast, translateX, translateY]);
+  }, [fechar, opacity, progresso, reduzido, toast, translateX, translateY]);
 
   if (!toast) return null;
 
@@ -167,10 +175,10 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
   };
 
   const visual = {
-    sucesso: { cor: theme.success, icone: 'checkmark-circle' as const },
-    erro: { cor: theme.danger, icone: 'alert-circle' as const },
-    aviso: { cor: theme.accentOrange, icone: 'warning' as const },
-    info: { cor: theme.brand, icone: 'information-circle' as const },
+    sucesso: { cor: theme.success, fundo: theme.brandSoft, icone: 'check' as const },
+    erro: { cor: theme.danger, fundo: theme.dangerSoft, icone: 'alert-circle' as const },
+    aviso: { cor: theme.warning, fundo: theme.warningSoft, icone: 'alert-triangle' as const },
+    info: { cor: theme.brand, fundo: theme.brandSoft, icone: 'info' as const },
   }[toast.tom];
 
   const larguraProgresso = progresso.interpolate({
@@ -185,16 +193,18 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
         {...gesto.panHandlers}
         style={[
           styles.toast,
+          sombraCartao(theme.shadow),
           {
             backgroundColor: theme.backgroundElement,
-            borderColor: theme.border,
-            shadowColor: theme.shadow,
             opacity,
             transform: [{ translateX }, { translateY }],
           },
         ]}>
+        <FundoCartao />
         <View style={styles.conteudo}>
-          <Ionicons name={visual.icone} size={24} color={visual.cor} />
+          <View style={[styles.selo, { backgroundColor: visual.fundo }]}>
+            <Icone nome={visual.icone} tamanho={20} cor={visual.cor} />
+          </View>
           <View style={styles.textos}>
             <ThemedText type="smallBold">{toast.titulo}</ThemedText>
             {toast.mensagem ? (
@@ -208,8 +218,8 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
             accessibilityLabel="Fechar notificação"
             hitSlop={12}
             onPress={() => fechar(1)}
-            style={styles.fechar}>
-            <Ionicons name="close" size={19} color={theme.textSecondary} />
+            style={[styles.fechar, { backgroundColor: theme.backgroundSelected }]}>
+            <Icone nome="x" tamanho={16} cor={theme.textSecondary} />
           </Pressable>
         </View>
         {toast.acao ? (
@@ -219,7 +229,8 @@ function ToastViewport({ toast, onClose }: { toast: ToastItem | null; onClose: (
             </ThemedText>
           </Pressable>
         ) : null}
-        <View style={[styles.trilho, { backgroundColor: theme.border }]}>
+        {/* Tempo restante: fio em pílula, recuado das bordas do cartão. */}
+        <View style={[styles.trilho, { backgroundColor: theme.backgroundSelected }]}>
           <Animated.View
             style={[styles.progresso, { backgroundColor: visual.cor, width: larguraProgresso }]}
           />
@@ -245,12 +256,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 520,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: Radii.large,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
+    borderRadius: Radii.extraLarge,
+    paddingBottom: Spacing.three,
   },
   conteudo: {
     minHeight: 72,
@@ -258,6 +265,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     padding: Spacing.three,
+    paddingBottom: Spacing.two,
+  },
+  selo: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textos: {
     flex: 1,
@@ -267,6 +282,7 @@ const styles = StyleSheet.create({
   fechar: {
     width: 32,
     height: 32,
+    borderRadius: Radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -276,10 +292,13 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.two,
   },
   trilho: {
-    height: 3,
-    width: '100%',
+    height: 4,
+    marginHorizontal: Spacing.three,
+    borderRadius: Radii.pill,
+    overflow: 'hidden',
   },
   progresso: {
     height: '100%',
+    borderRadius: Radii.pill,
   },
 });

@@ -1,7 +1,7 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useEffect, useId, useState, type Ref } from 'react';
 import {
   Animated,
+  InputAccessoryView,
   Platform,
   Pressable,
   StyleSheet,
@@ -11,6 +11,8 @@ import {
   type TextStyle,
 } from 'react-native';
 
+import { Icone, type NomeIcone } from '@/components/icone';
+import { FundoCartao } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import { Motion } from '@/constants/motion';
 import { FontSize, JakartaFamilies, LineHeight, Radii, Spacing } from '@/constants/theme';
@@ -26,12 +28,18 @@ export type IconFieldStatus = {
 
 export type IconFieldProps = TextInputProps & {
   label: string;
-  icon: ComponentProps<typeof Ionicons>['name'];
+  icon: NomeIcone;
   /** `true` quando o campo está dentro de um Card branco: ele passa a ser cinza. */
   sobreCartao?: boolean;
   /** Selo sobre a borda superior direita, como um rótulo flutuante. */
   status?: IconFieldStatus;
+  /** Referência ao campo (para o anterior chamar `focus()` neste ao tocar "Próximo"). */
+  ref?: Ref<TextInput>;
 };
+
+// Teclados numéricos do iOS não têm tecla de retorno: sem uma barra extra, não
+// haveria como avançar para o próximo campo pelo teclado.
+const TECLADOS_SEM_RETORNO = new Set(['phone-pad', 'number-pad', 'decimal-pad', 'numeric']);
 
 // No navegador, o <input> ganha um anel de foco próprio por dentro da pílula.
 // O foco já é indicado pela borda verde da pílula, então removemos esse anel.
@@ -50,12 +58,24 @@ export function IconField({
   style,
   onFocus,
   onBlur,
+  ref,
   ...rest
 }: IconFieldProps) {
   const theme = useTheme();
   const reduzido = useMovimentoReduzido();
   const [focado, setFocado] = useState(false);
   const [input, setInput] = useState<TextInput | null>(null);
+  const idAcessorio = `campo-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const precisaBarra =
+    Platform.OS === 'ios' && !!rest.onSubmitEditing && TECLADOS_SEM_RETORNO.has(rest.keyboardType ?? '');
+  const rotuloBarra = rest.returnKeyType === 'next' ? 'Próximo' : 'Concluir';
+
+  // Guarda a referência interna (tocar na pílula foca o campo) e repassa a externa.
+  const guardarRef = (no: TextInput | null) => {
+    setInput(no);
+    if (typeof ref === 'function') ref(no);
+    else if (ref) (ref as { current: TextInput | null }).current = no;
+  };
 
   const fundoCampo = sobreCartao ? theme.background : theme.backgroundElement;
   const fundoPagina = sobreCartao ? theme.backgroundElement : theme.background;
@@ -66,7 +86,9 @@ export function IconField({
 
   // A borda aparece com fade (foco, "ok" ou erro) em vez de surgir de uma vez.
   const forte = erro || destacado;
-  const corBordaForte = erro ? theme.danger : theme.gradientFrom;
+  // Contorno suave: cor translúcida (o halo em volta completa o destaque).
+  // Contorno único e suave: a cor da marca (ou do erro) translúcida, sem halo.
+  const corBordaForte = erro ? `${theme.danger}A6` : `${theme.brand}80`;
   const [destaque] = useState(() => new Animated.Value(forte ? 1 : 0));
   useEffect(() => {
     if (reduzido) {
@@ -82,21 +104,36 @@ export function IconField({
     animacao.start();
     return () => animacao.stop();
   }, [forte, reduzido, destaque]);
-  const corBorda = destaque.interpolate({ inputRange: [0, 1], outputRange: [fundoCampo, corBordaForte] });
+  // Em repouso a borda é a mesma cor, transparente: só a opacidade anima.
+  const corBordaRepouso = `${(erro ? theme.danger : theme.brand).slice(0, 7)}00`;
+  const corBorda = destaque.interpolate({ inputRange: [0, 1], outputRange: [corBordaRepouso, corBordaForte] });
   const corDestaque = erro ? theme.danger : destacado ? theme.brand : theme.textSecondary;
   const corStatus = status?.tom === 'erro' ? theme.danger : status?.tom === 'ok' ? theme.brand : theme.textSecondary;
 
   return (
     <Pressable onPress={() => input?.focus()} accessible={false}>
-     <Animated.View style={[styles.caixa, { backgroundColor: fundoCampo, borderColor: corBorda }]}>
+     <Animated.View
+       style={[
+         styles.caixa,
+         { backgroundColor: fundoCampo, borderColor: corBorda },
+       ]}>
+      {/* Dentro de um cartão, o campo ganha degradê próprio (outra matiz) para se destacar. */}
+      {sobreCartao && (
+        <View style={styles.fundoDegrade} pointerEvents="none">
+          <FundoCartao de={theme.fieldGradientFrom} para={theme.fieldGradientTo} />
+        </View>
+      )}
       <View style={styles.icone}>
-        <Ionicons name={icon} size={20} color={corDestaque} />
+        <Icone nome={icon} tamanho={20} cor={corDestaque} />
       </View>
       <View style={styles.textos}>
         <ThemedText style={[styles.rotulo, { color: corDestaque }]}>{label}</ThemedText>
         <TextInput
-          ref={setInput}
+          ref={guardarRef}
           accessibilityLabel={label}
+          // "Próximo" leva ao campo seguinte sem fechar e reabrir o teclado.
+          submitBehavior={rest.returnKeyType === 'next' ? 'submit' : undefined}
+          inputAccessoryViewID={precisaBarra ? idAcessorio : undefined}
           placeholderTextColor={theme.textSecondary}
           onFocus={(e) => {
             setFocado(true);
@@ -119,16 +156,48 @@ export function IconField({
             <View style={{ flex: 1, backgroundColor: fundoPagina }} />
             <View style={{ flex: 1, backgroundColor: fundoCampo }} />
           </View>
-          {ok && <Ionicons name="checkmark" size={14} color={corStatus} />}
+          {ok && <Icone nome="check" tamanho={14} cor={corStatus} />}
           <ThemedText style={[styles.seloTexto, { color: corStatus }]}>{status.texto}</ThemedText>
         </View>
       )}
      </Animated.View>
+
+      {precisaBarra && (
+        <InputAccessoryView nativeID={idAcessorio}>
+          <View style={[styles.barraTeclado, { backgroundColor: theme.backgroundSelected, borderTopColor: theme.border }]}>
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => rest.onSubmitEditing?.({ nativeEvent: { text: String(rest.value ?? '') } } as never)}>
+              <ThemedText type="smallBold" themeColor="brand">{rotuloBarra}</ThemedText>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  // Recortado na pílula aqui (e não na caixa), para o selo de status poder
+  // continuar saindo pela borda de cima.
+  fundoDegrade: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: Radii.pill,
+    overflow: 'hidden',
+  },
+  barraTeclado: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   caixa: {
     minHeight: 64,
     flexDirection: 'row',

@@ -1,16 +1,17 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { QRCode } from '@ttsalpha/qrcode/native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { Icone } from '@/components/icone';
 import { ActionPill } from '@/components/action-pill';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { JanelaAnimada } from '@/components/familia/janela-animada';
 import { IconButton } from '@/components/icon-button';
 import { IconField } from '@/components/icon-field';
+import { PressableScale } from '@/components/pressable-scale';
+import { QrFound, type QrExportavel } from '@/components/qr-found';
 import { LocationMap } from '@/components/location-map';
 import { PersonRow } from '@/components/person-row';
 import { PrimaryButton } from '@/components/primary-button';
@@ -21,6 +22,7 @@ import { SegmentedTabs } from '@/components/segmented-tabs';
 import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
 import { Palette, Radii, Spacing } from '@/constants/theme';
+import { EscalaToque, Motion } from '@/constants/motion';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
@@ -28,6 +30,7 @@ import { finderUrl } from '@/lib/finder-url';
 import { openStreetMapUrl } from '@/lib/map-url';
 import { salvarImagemQr } from '@/lib/save-qr-image';
 import { supabase } from '@/lib/supabase';
+import { tempoRelativo } from '@/lib/tempo-relativo';
 
 type AbaFamilia = 'membros' | 'qrcodes';
 type Pessoa = { profile_id: string; username: string; full_name: string; papel?: string };
@@ -61,20 +64,31 @@ type PingLocalizacao = {
   received_at: string;
 };
 
-type QrCodeHandle = {
-  toDataURL: (callback: (base64: string) => void) => void;
-};
+type ParamsFamilia = { id?: string; aba?: AbaFamilia; nome?: string };
 
+/**
+ * A rota fica montada entre visitas (é uma aba oculta). Sem a `key`, ao abrir
+ * outra família o estado da anterior (nome, membros, QR Codes) aparecia até o
+ * carregamento terminar. Com ela, cada família monta a tela do zero.
+ */
 export default function ConfigurarFamiliaScreen() {
+  const params = useLocalSearchParams<ParamsFamilia>();
+  const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
+  return <ConfiguracaoDaFamilia key={groupId ?? 'nova'} />;
+}
+
+function ConfiguracaoDaFamilia() {
   const theme = useTheme();
   const { notificar } = useToast();
   const { width } = useWindowDimensions();
-  const params = useLocalSearchParams<{ id?: string; aba?: AbaFamilia }>();
+  const params = useLocalSearchParams<ParamsFamilia>();
   const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
+  // Nome vindo da lista (quando houver): o título já aparece certo antes de carregar.
+  const nomeInicial = (Array.isArray(params.nome) ? params.nome[0] : params.nome) ?? '';
   const { session } = useAuth();
   const [aba, setAba] = useState<AbaFamilia>(params.aba === 'qrcodes' ? 'qrcodes' : 'membros');
-  const [nome, setNome] = useState('');
-  const [nomeSalvo, setNomeSalvo] = useState('');
+  const [nome, setNome] = useState(nomeInicial);
+  const [nomeSalvo, setNomeSalvo] = useState(nomeInicial);
   const [papel, setPapel] = useState('chefe');
   const [membros, setMembros] = useState<Pessoa[]>([]);
   const [amigos, setAmigos] = useState<Pessoa[]>([]);
@@ -97,7 +111,11 @@ export default function ConfigurarFamiliaScreen() {
   const [qrConfigurando, setQrConfigurando] = useState<QrCadastrado | null>(null);
   const [nomeQrEditando, setNomeQrEditando] = useState('');
   const [salvandoEdicaoQr, setSalvandoEdicaoQr] = useState(false);
-  const [qrRenderizado, setQrRenderizado] = useState<QrCodeHandle | null>(null);
+  // Versão com moldura (nome + marca) para o download. Só é montada ao tocar em
+  // baixar: montá-la junto com a janela pesava a animação de abertura.
+  const aguardandoExportacao = useRef<((svg: QrExportavel) => void) | null>(null);
+  // Mostrar o link sobre o QR: transição suave em vez de troca seca.
+  const [linkProgresso] = useState(() => new Animated.Value(0));
   const [baixandoQr, setBaixandoQr] = useState(false);
   const [exibindoLinkQr, setExibindoLinkQr] = useState(false);
 
@@ -440,11 +458,21 @@ export default function ConfigurarFamiliaScreen() {
   }
 
   async function baixarImagemQr() {
-    if (!qrAberto || !qrRenderizado) return;
+    if (!qrAberto) return;
+    // Monta o adesivo (baixandoQr) e espera ele ficar pronto para exportar.
+    const svgPronto = new Promise<QrExportavel>((resolve) => {
+      aguardandoExportacao.current = resolve;
+    });
     setBaixandoQr(true);
 
     try {
-      const base64 = await new Promise<string>((resolve) => qrRenderizado.toDataURL(resolve));
+      const svg = await svgPronto;
+      // Um instante para o layout assentar (a web mede o elemento para exportar).
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      // 1080 px de largura: nítido para imprimir e colar.
+      const base64 = await new Promise<string>((resolve) =>
+        svg.toDataURL(resolve, { width: 1080, height: Math.round((1080 * 418) / 340) }),
+      );
       const nomeSeguro = qrAberto.dependent_name
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -464,7 +492,7 @@ export default function ConfigurarFamiliaScreen() {
 
       notificar({
         titulo: 'QR Code salvo',
-        mensagem: 'A imagem foi adicionada à sua galeria.',
+        mensagem: Platform.OS === 'web' ? 'A imagem foi baixada para o seu computador.' : 'A imagem foi adicionada à sua galeria.',
         tom: 'sucesso',
       });
     } catch {
@@ -474,21 +502,29 @@ export default function ConfigurarFamiliaScreen() {
         tom: 'erro',
       });
     } finally {
+      aguardandoExportacao.current = null;
       setBaixandoQr(false);
     }
   }
 
   function abrirQr(qr: QrCadastrado) {
     setExibindoLinkQr(false);
-    setQrRenderizado(null);
     setQrAberto(qr);
   }
 
   function fecharQr() {
     setQrAberto(null);
     setExibindoLinkQr(false);
-    setQrRenderizado(null);
   }
+
+  useEffect(() => {
+    Animated.timing(linkProgresso, {
+      toValue: exibindoLinkQr ? 1 : 0,
+      duration: Motion.base,
+      easing: Motion.suave,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [exibindoLinkQr, linkProgresso]);
 
   const podeEditar = !groupId || papel === 'chefe';
   const tamanhoQr = Math.min(width - 128, 296);
@@ -504,33 +540,32 @@ export default function ConfigurarFamiliaScreen() {
   return (
     <Screen
       titulo={groupId ? nomeSalvo || nome || 'Família' : 'Nova família'}
-      subtitulo={groupId ? 'Gerencie membros e QR Codes em um só lugar.' : 'Escolha um nome e convide seus amigos.'}
+      subtitulo={groupId ? 'Membros e QR Codes da família.' : 'Dê um nome e convide amigos.'}
+      aoVoltar={() => router.replace('/')}
+      rotuloVoltar="Voltar para o início"
       acao={
-        <View style={styles.acoesCabecalho}>
-          {groupId && podeEditar && (
-            <IconButton
-              icone="pencil-outline"
-              rotulo="Editar nome da família"
-              variante="claro"
-              onPress={() => setEditandoNome(true)}
-            />
-          )}
-          <IconButton icone="arrow-back" rotulo="Voltar para o início" onPress={() => router.replace('/')} />
-        </View>
+        groupId && podeEditar ? (
+          <IconButton
+            icone="edit-2"
+            rotulo="Editar nome da família"
+            variante="claro"
+            onPress={() => setEditandoNome(true)}
+          />
+        ) : undefined
       }
       aoAtualizar={carregar}
       atualizando={carregando}>
       {(!groupId || editandoNome) && (
         <Card>
           <View style={styles.tituloCard}>
-            <Ionicons name={groupId ? 'pencil-outline' : 'home-outline'} size={22} color={theme.brand} />
+            <Icone nome={groupId ? 'edit-2' : 'home'} tamanho={22} cor={theme.brand} />
             <ThemedText type="large" style={styles.negrito}>
               {groupId ? 'Editar nome da família' : 'Informações da família'}
             </ThemedText>
           </View>
           <IconField
             sobreCartao
-            icon="home-outline"
+            icon="home"
             label="Nome da família"
             placeholder="Ex.: Família Oliveira"
             value={nome}
@@ -545,8 +580,8 @@ export default function ConfigurarFamiliaScreen() {
       {groupId && (
         <SegmentedTabs
           opcoes={[
-            { chave: 'membros', rotulo: `Membros (${membros.length})`, icone: 'people-outline' },
-            { chave: 'qrcodes', rotulo: `QR Codes (${qrs.length})`, icone: 'qr-code-outline' },
+            { chave: 'membros', rotulo: `Membros (${membros.length})`, icone: 'users' },
+            { chave: 'qrcodes', rotulo: `QR Codes (${qrs.length})`, icone: 'qr-code' },
           ]}
           valor={aba}
           onChange={setAba}
@@ -577,8 +612,8 @@ export default function ConfigurarFamiliaScreen() {
             return (
               <Card key={sessao.id}>
                 <View style={styles.alertaCabecalho}>
-                  <View style={[styles.alertaIcone, { backgroundColor: theme.dangerSoft }]}>
-                    <Ionicons name="location" size={24} color={theme.danger} />
+                  <View style={[styles.alertaIcone, { backgroundColor: theme.brandSoft }]}>
+                    <Icone nome="map-pin" tamanho={24} cor={theme.brand} />
                   </View>
                   <View style={styles.textos}>
                     <ThemedText style={styles.negrito}>Localização recebida</ThemedText>
@@ -589,7 +624,17 @@ export default function ConfigurarFamiliaScreen() {
                 </View>
                 {ping ? (
                   <>
-                    <LocationMap lat={ping.lat} lng={ping.lng} />
+                    {/* Um mapa só: onde está o QR (pin do Found) e, se você compartilhou,
+                        onde você está, ligados por uma linha tracejada. */}
+                    <LocationMap
+                      selo={`Atualizada ${tempoRelativo(ping.recorded_at)}`}
+                      pontos={[
+                        { lat: ping.lat, lng: ping.lng, tipo: 'encontrado', rotulo: qr?.dependent_name ?? 'QR Code' },
+                        ...(sessao.responsible_lat != null && sessao.responsible_lng != null
+                          ? [{ lat: sessao.responsible_lat, lng: sessao.responsible_lng, tipo: 'pessoa' as const, rotulo: 'Você' }]
+                          : []),
+                      ]}
+                    />
                     <ThemedText type="small" themeColor="textSecondary">
                       Atualizada em {new Date(ping.recorded_at).toLocaleString('pt-BR')}
                       {ping.accuracy_m ? ` · precisão aproximada de ${Math.round(ping.accuracy_m)} m` : ''}
@@ -599,12 +644,6 @@ export default function ConfigurarFamiliaScreen() {
                       <SecondaryButton compacto bloco label="Abrir mapa" tom="marca" onPress={() => void Linking.openURL(openStreetMapUrl(ping.lat, ping.lng))} />
                       <PrimaryButton label="Já encontramos" onPress={() => void resolverSessao(sessao.id)} />
                     </View>
-                    {sessao.responsible_lat != null && sessao.responsible_lng != null && (
-                      <>
-                        <ThemedText style={styles.negrito}>Sua localização compartilhada</ThemedText>
-                        <LocationMap lat={sessao.responsible_lat} lng={sessao.responsible_lng} />
-                      </>
-                    )}
                   </>
                 ) : (
                   <>
@@ -628,16 +667,16 @@ export default function ConfigurarFamiliaScreen() {
       {groupId && aba === 'qrcodes' && (
         <Section
           titulo="QR Codes cadastrados"
-          acao={<IconButton icone="add" rotulo="Cadastrar QR Code" onPress={() => setMostrandoNovoQr(true)} />}>
+          acao={<IconButton icone="plus" rotulo="Cadastrar QR Code" onPress={() => setMostrandoNovoQr(true)} />}>
           {mostrandoNovoQr && (
             <Card>
               <View style={styles.tituloCard}>
-                <Ionicons name="qr-code-outline" size={22} color={theme.brand} />
+                <Icone nome="qr-code" tamanho={22} cor={theme.brand} />
                 <ThemedText type="large" style={styles.negrito}>Novo QR Code</ThemedText>
               </View>
               <IconField
                 sobreCartao
-                icon="qr-code-outline"
+                icon="qr-code"
                 label="Nome de identificação"
                 placeholder="Ex.: Lucas, Mochila da Ana, Rex"
                 value={nomeQr}
@@ -659,13 +698,22 @@ export default function ConfigurarFamiliaScreen() {
           )}
 
           {!carregando && qrs.length === 0 ? (
-            <EmptyState icone="qr-code-outline" titulo="Nenhum QR Code cadastrado" descricao="Cadastre o primeiro QR com o nome da pessoa, pet ou objeto que ele protegerá." />
+            <EmptyState icone="qr-code" titulo="Nenhum QR Code cadastrado" descricao="Cadastre o primeiro QR com o nome da pessoa, pet ou objeto que ele protegerá." />
           ) : (
             qrs.map((qr) => (
-              <Card key={qr.id} style={styles.cartaoLista} onPress={() => abrirQr(qr)}>
+              <Card key={qr.id} style={styles.cartaoLista}>
+                {/* A área do nome abre o QR e o lápis configura: botões irmãos, não um
+                    dentro do outro (botão aninhado é HTML inválido e confunde leitores de tela). */}
                 <View style={styles.qrLinha}>
+                  <PressableScale
+                    accessibilityRole="button"
+                    accessibilityLabel={`Abrir QR Code de ${qr.dependent_name}`}
+                    onPress={() => abrirQr(qr)}
+                    escala={EscalaToque.cartao}
+                    externo={styles.qrAbrir}
+                    style={styles.qrLinha}>
                   <View style={[styles.qrIcone, { backgroundColor: theme.brandSoft }]}>
-                    <Ionicons name="qr-code" size={26} color={theme.brand} />
+                    <Icone nome="qr-code" tamanho={26} cor={theme.brand} />
                   </View>
                   <View style={styles.textos}>
                     <ThemedText style={styles.negrito} numberOfLines={1}>{qr.dependent_name}</ThemedText>
@@ -679,8 +727,9 @@ export default function ConfigurarFamiliaScreen() {
                       {' · Uso ilimitado'}
                     </ThemedText>
                   </View>
+                  </PressableScale>
                   <IconButton
-                    icone="pencil-outline"
+                    icone="edit-2"
                     rotulo={`Configurar ${qr.dependent_name}`}
                     variante="contorno"
                     onPress={() => abrirConfiguracaoQr(qr)}
@@ -695,17 +744,17 @@ export default function ConfigurarFamiliaScreen() {
       <JanelaAnimada visivel={!!qrAberto} onFechar={fecharQr}>
         <View style={styles.modalCabecalho}>
           <View style={styles.textos}>
-            <ThemedText type="subtitle" numberOfLines={1}>
+            <ThemedText type="subtitle" numberOfLines={1} style={styles.tituloQr}>
               {qrExibido?.dependent_name}
             </ThemedText>
           </View>
           <IconButton
-            icone="download-outline"
+            icone="download"
             rotulo="Baixar imagem do QR Code"
             loading={baixandoQr}
             onPress={() => void baixarImagemQr()}
           />
-          <IconButton icone="close" rotulo="Fechar" variante="contorno" onPress={fecharQr} />
+          <IconButton icone="x" rotulo="Fechar" variante="contorno" onPress={fecharQr} />
         </View>
 
         <Pressable
@@ -727,44 +776,54 @@ export default function ConfigurarFamiliaScreen() {
               height: tamanhoQr + 48,
             },
           ]}>
-          <View style={exibindoLinkQr ? styles.qrDesmaiado : undefined} pointerEvents="none">
+          <Animated.View
+            style={{ opacity: linkProgresso.interpolate({ inputRange: [0, 1], outputRange: [1, 0.12] }) }}
+            pointerEvents="none">
             {qrExibido && (
-              <QRCode
-                ref={(referencia) => setQrRenderizado(referencia as QrCodeHandle | null)}
-                value={finderUrl(qrExibido.token)}
-                size={tamanhoQr}
-                margin={4}
-                dotStyle="circle"
-                dotColor={Palette.graphite}
-                backgroundColor={Palette.white}
-                corner={{
-                  square: { style: 'extra-rounded', color: Palette.graphite },
-                  dot: { style: 'circle', color: Palette.graphite },
-                }}
-                logo={{
-                  src: require('@/assets/images/found-qr-logo.png'),
-                  size: 0.3,
-                  margin: 1,
-                  hideDots: true,
-                  radius: 0.18,
-                }}
-                ariaLabel={`QR Code de ${qrExibido.dependent_name}`}
+              <QrFound
+                valor={finderUrl(qrExibido.token)}
+                tamanho={tamanhoQr}
+                accessibilityLabel={`QR Code de ${qrExibido.dependent_name}`}
               />
             )}
-          </View>
-          {qrAberto && exibindoLinkQr && (
-            <View style={styles.linkSobreQr} pointerEvents="none">
-              <Ionicons name="open-outline" size={24} color={theme.brand} />
+          </Animated.View>
+          {qrAberto && (
+            <Animated.View
+              style={[
+                styles.linkSobreQr,
+                {
+                  opacity: linkProgresso,
+                  transform: [{ scale: linkProgresso.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+                },
+              ]}
+              pointerEvents="none"
+              aria-hidden={!exibindoLinkQr}>
+              <Icone nome="external-link" tamanho={24} cor={theme.brand} />
               <ThemedText type="smallBold" style={[styles.textoCentralizado, { color: theme.brand }]}>
                 Abrir link
               </ThemedText>
-            </View>
+            </Animated.View>
           )}
         </Pressable>
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado}>
           Toque no QR para abrir o link.
         </ThemedText>
+
+        {/* Adesivo para o download: invisível e montado só durante a exportação.
+            A opacidade fica no contêiner, não no Svg, para não ir junto na imagem. */}
+        {qrExibido && baixandoQr && (
+          <View style={styles.qrExportacao} pointerEvents="none" aria-hidden>
+            <QrFound
+              valor={finderUrl(qrExibido.token)}
+              tamanho={340}
+              moldura={{ nome: qrExibido.dependent_name }}
+              svgRef={(svg) => {
+                if (svg && aguardandoExportacao.current) aguardandoExportacao.current(svg);
+              }}
+            />
+          </View>
+        )}
       </JanelaAnimada>
 
       <JanelaAnimada visivel={!!qrConfigurando} onFechar={() => setQrConfigurando(null)} fecharAoTocarFora={false}>
@@ -775,12 +834,12 @@ export default function ConfigurarFamiliaScreen() {
               Altere as opções deste QR Code.
             </ThemedText>
           </View>
-          <IconButton icone="close" rotulo="Fechar" variante="contorno" onPress={() => setQrConfigurando(null)} />
+          <IconButton icone="x" rotulo="Fechar" variante="contorno" onPress={() => setQrConfigurando(null)} />
         </View>
 
         <IconField
           sobreCartao
-          icon="qr-code-outline"
+          icon="qr-code"
           label="Nome de identificação"
           value={nomeQrEditando}
           onChangeText={setNomeQrEditando}
@@ -842,7 +901,7 @@ function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carreg
       {podeEditar && (
         <Section titulo="Adicionar membros">
           {!carregando && amigos.length === 0 ? (
-            <EmptyState icone="people-outline" titulo="Nenhum amigo disponível" descricao="Adicione amigos na Comunidade. Depois, eles aparecerão aqui para receber um convite." />
+            <EmptyState icone="users" titulo="Nenhum amigo disponível" descricao="Adicione amigos na Comunidade. Depois, eles aparecerão aqui para receber um convite." />
           ) : (
             amigos.map((pessoa) => {
               const selecionado = selecionados.includes(pessoa.profile_id);
@@ -863,7 +922,7 @@ function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carreg
                       <ActionPill
                         label={selecionado ? 'Selecionado' : 'Adicionar'}
                         variante={selecionado ? 'suave' : 'escuro'}
-                        icone={selecionado ? 'checkmark' : undefined}
+                        icone={selecionado ? 'check' : undefined}
                         onPress={() => onAlternarSelecionado(pessoa.profile_id)}
                       />
                     )
@@ -884,7 +943,6 @@ function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carreg
 }
 
 const styles = StyleSheet.create({
-  acoesCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   tituloCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   negrito: { fontWeight: 700 },
   lista: { gap: Spacing.two },
@@ -892,6 +950,7 @@ const styles = StyleSheet.create({
   cartaoLista: { padding: Spacing.three },
   textos: { flex: 1, minWidth: 0 },
   qrLinha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  qrAbrir: { flex: 1, minWidth: 0 },
   qrIcone: { width: 56, height: 56, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
   alertaCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   alertaIcone: { width: 48, height: 48, borderRadius: Radii.pill, alignItems: 'center', justifyContent: 'center' },
@@ -906,7 +965,10 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     overflow: 'hidden',
   },
-  qrDesmaiado: { opacity: 0.12 },
+  // Uma linha só corta o que passa da caixa: a folga embaixo (compensada pela
+  // margem) deixa a perna do "g", "j", "p" inteira sem mover o layout.
+  tituloQr: { paddingBottom: Spacing.one, marginBottom: -Spacing.one },
+  qrExportacao: { position: 'absolute', top: 0, left: 0, opacity: 0 },
   linkSobreQr: {
     position: 'absolute',
     top: 0,

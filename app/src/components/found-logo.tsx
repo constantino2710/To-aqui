@@ -6,7 +6,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-const PIN = 'M24 8c-7.2 0-13 5.6-13 12.6C11 30 24 40 24 40s13-10 13-19.4C37 13.6 31.2 8 24 8z';
+/** Contorno do pin no viewBox 48 × 48 do símbolo (centro visual em 24, 24). */
+export const PIN = 'M24 8c-7.2 0-13 5.6-13 12.6C11 30 24 40 24 40s13-10 13-19.4C37 13.6 31.2 8 24 8z';
 
 export type FoundMarkProps = {
   /** Lado do símbolo em px. */

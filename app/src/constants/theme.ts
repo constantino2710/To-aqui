@@ -12,6 +12,14 @@ export const Palette = {
 
   // Grafite: texto principal e botões de ação.
   graphite: '#1E2320',
+  // Ponta clara do degradê dos cartões escuros e textos sobre eles.
+  graphiteSoft: '#2B3A33',
+  onGraphiteSoft: '#B9C7BF',
+  onGraphiteLine: 'rgba(255, 255, 255, 0.12)',
+  // Sobre o cartão verde (ingresso da tag): texto/ícones grafite e vidro escuro.
+  graphiteGlass: 'rgba(30, 35, 32, 0.12)',
+  graphiteMuted: 'rgba(30, 35, 32, 0.68)',
+  graphiteLine: 'rgba(30, 35, 32, 0.28)',
   ink: '#1E2320',
 
   // Sálvia: degradê de destaque e seus apoios.
@@ -28,12 +36,23 @@ export const Palette = {
   gray200: '#E6E9E5',
   gray150: '#E8EAE6',
   gray50: '#F1F2F0',
+  // Ponta do degradê sutil dos cartões (branco puxando para a sálvia).
+  cardTint: '#E9F4EE',
+  // Degradê dos campos dentro de cartões: cinza-sálvia → azul-névoa.
+  fieldFrom: '#ECEFEA',
+  fieldTo: '#E3E9F0',
+  // Trilho do interruptor desligado.
+  toggleTrack: '#DCE0DB',
 
   // Neutros escuros.
   night: '#121614',
   nightSoft: '#1B201D',
   nightRaised: '#252B27',
   nightBorder: '#2A302C',
+  nightCardTint: '#22302A',
+  nightFieldFrom: '#232A26',
+  nightFieldTo: '#1F2630',
+  nightToggleTrack: '#3A433E',
 
   // Destaque pontual (selos, "QR ativo").
   sun: '#F5C542',
@@ -54,6 +73,9 @@ export const Palette = {
 
   shadow: 'rgba(30, 35, 32, 0.08)',
   shadowDark: 'rgba(0, 0, 0, 0.32)',
+  // Sombra de cartões escuros/de destaque, que precisam de mais contraste.
+  shadowStrong: 'rgba(30, 35, 32, 0.32)',
+  shadowStrongDark: 'rgba(0, 0, 0, 0.55)',
   overlay: 'rgba(10, 12, 11, 0.66)',
 } as const;
 
@@ -63,6 +85,13 @@ export const Colors = {
     text: Palette.graphite,
     background: Palette.gray50,
     backgroundElement: Palette.white,
+    /** Ponta final do degradê sutil dos cartões (começa em `backgroundElement`). */
+    cardGradientTo: Palette.cardTint,
+    /** Degradê dos campos e superfícies internas de um cartão (outra matiz, para destacar). */
+    fieldGradientFrom: Palette.fieldFrom,
+    fieldGradientTo: Palette.fieldTo,
+    /** Trilho do interruptor desligado: contrasta com cartões nos dois temas. */
+    toggleTrack: Palette.toggleTrack,
     backgroundSelected: Palette.gray150,
     textSecondary: Palette.gray700,
     /** Cor da marca para texto e ícones (links, destaques). */
@@ -79,9 +108,14 @@ export const Colors = {
     danger: Palette.red,
     /** Fundo suave de erro (avisos, selos). */
     dangerSoft: '#FCE8E9',
+    /** Avisos: texto/ícone (≥ 4,5:1 sobre branco) e fundo suave. */
+    warning: '#B4570E',
+    warningSoft: '#FCEFE3',
     success: Palette.sage700,
     border: Palette.gray200,
     shadow: Palette.shadow,
+    /** Sombra mais presente, para cartões escuros (ex.: identidade do perfil). */
+    shadowStrong: Palette.shadowStrong,
     overlay: Palette.overlay,
     accentPink: Palette.rose,
     accentOrange: Palette.orange,
@@ -91,6 +125,10 @@ export const Colors = {
     text: Palette.gray50,
     background: Palette.night,
     backgroundElement: Palette.nightSoft,
+    cardGradientTo: Palette.nightCardTint,
+    fieldGradientFrom: Palette.nightFieldFrom,
+    fieldGradientTo: Palette.nightFieldTo,
+    toggleTrack: Palette.nightToggleTrack,
     backgroundSelected: Palette.nightRaised,
     textSecondary: Palette.gray300,
     brand: Palette.sage300dark,
@@ -102,9 +140,12 @@ export const Colors = {
     gradientTo: Palette.sage400,
     danger: '#FF8A8F',
     dangerSoft: '#3A1E20',
+    warning: '#F6B97A',
+    warningSoft: '#3B2A18',
     success: Palette.sage300dark,
     border: Palette.nightBorder,
     shadow: Palette.shadowDark,
+    shadowStrong: Palette.shadowStrongDark,
     overlay: Palette.overlay,
     accentPink: Palette.rose,
     accentOrange: Palette.orange,

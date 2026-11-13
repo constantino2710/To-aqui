@@ -1,19 +1,24 @@
 import * as Clipboard from 'expo-clipboard';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { StyleSheet, Switch, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { StyleSheet, View, type TextInput } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 
 import { ActionPill } from '@/components/action-pill';
-import { Card } from '@/components/card';
+import { AlturaAnimada } from '@/components/altura-animada';
+import { AneisMarca } from '@/components/aneis-marca';
+import { Badge } from '@/components/badge';
+import { Card, FundoCartao } from '@/components/card';
 import { DevAccountSwitcher } from '@/components/dev-account-switcher';
+import { Entrada } from '@/components/entrada';
+import { IconButton } from '@/components/icon-button';
 import { IconField } from '@/components/icon-field';
 import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
-import { SecondaryButton } from '@/components/secondary-button';
 import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
-import { FontSize, JakartaFamilies, LineHeight, Palette, Radii, Spacing } from '@/constants/theme';
+import { Toggle } from '@/components/toggle';
+import { FontSize, JakartaFamilies, Palette, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
@@ -27,10 +32,6 @@ type Perfil = {
   friend_code: string;
 };
 
-// O cartão de identidade é escuro nos dois temas, então suas cores são fixas.
-const CARTAO_FIM = '#2B3A33';
-const TEXTO_SUAVE = '#B9C7BF';
-const DIVISORIA = 'rgba(255, 255, 255, 0.12)';
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean);
@@ -51,16 +52,29 @@ export default function PerfilScreen() {
   const [editando, setEditando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [resumo, setResumo] = useState<{ familias: number; amigos: number } | null>(null);
+  // "Próximo" no teclado leva de um campo ao outro.
+  const campoUsername = useRef<TextInput>(null);
+  const campoTelefone = useRef<TextInput>(null);
 
   const carregar = useCallback(async () => {
     if (!session) return;
     setCarregando(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username, full_name, phone, friend_code')
-      .eq('id', session.user.id)
-      .single();
+    const [perfilRes, gruposRes, amizadesRes] = await Promise.all([
+      supabase.from('profiles').select('username, full_name, phone, friend_code').eq('id', session.user.id).single(),
+      supabase.rpc('list_my_groups'),
+      supabase.rpc('list_friendships'),
+    ]);
     setCarregando(false);
+    // Resumo da capa: um extra, então falhas aqui só o escondem.
+    if (!gruposRes.error && !amizadesRes.error) {
+      const amizades = (amizadesRes.data ?? []) as { status: string }[];
+      setResumo({
+        familias: (gruposRes.data ?? []).length,
+        amigos: amizades.filter((a) => a.status === 'aceito').length,
+      });
+    }
+    const { data, error } = perfilRes;
 
     if (error) {
       notificar({ titulo: 'Não foi possível carregar seu perfil', mensagem: traduzErroBanco(error.message), tom: 'erro' });
@@ -113,92 +127,111 @@ export default function PerfilScreen() {
   }
 
   return (
-    <Screen titulo="Meu perfil" subtitulo="Suas informações e sua identidade na comunidade." aoAtualizar={carregar} atualizando={carregando}>
+    <Screen titulo="Meu perfil" subtitulo="Seus dados e como os amigos veem você." aoAtualizar={carregar} atualizando={carregando}>
       {perfil && (
         <>
-          <View style={styles.cartaoEscuro}>
-            <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <Defs>
-                <LinearGradient id="fundoIdentidade" x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0" stopColor={Palette.graphite} />
-                  <Stop offset="1" stopColor={CARTAO_FIM} />
-                </LinearGradient>
-              </Defs>
-              <Rect x="0" y="0" width="100" height="100" fill="url(#fundoIdentidade)" />
-            </Svg>
-            <Svg style={styles.aneis} width={160} height={160} viewBox="0 0 160 160" pointerEvents="none">
-              <Circle cx="120" cy="40" r="56" stroke={theme.gradientFrom} strokeOpacity={0.35} strokeWidth={2} fill="none" />
-              <Circle cx="120" cy="40" r="84" stroke={theme.gradientTo} strokeOpacity={0.2} strokeWidth={2} fill="none" />
-              <Circle cx="120" cy="40" r="112" stroke={theme.gradientFrom} strokeOpacity={0.12} strokeWidth={2} fill="none" />
-            </Svg>
-
-            <View style={styles.identidade}>
-              <Svg width={72} height={72} viewBox="0 0 72 72" accessibilityLabel={`Avatar de ${perfil.full_name}`}>
-                <Defs>
-                  <LinearGradient id="avatarVerde" x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0" stopColor={theme.gradientFrom} />
-                    <Stop offset="1" stopColor={theme.gradientTo} />
-                  </LinearGradient>
-                </Defs>
-                <Circle cx="36" cy="36" r="36" fill="url(#avatarVerde)" />
-                <SvgText
-                  x="36"
-                  y="46"
-                  textAnchor="middle"
-                  fill={Palette.graphite}
-                  fontSize={FontSize.heading}
-                  fontFamily={JakartaFamilies[800]}>
-                  {iniciais(perfil.full_name)}
-                </SvgText>
-              </Svg>
+          {/* Cartão de perfil: capa em verde suave com os anéis da marca e o
+              avatar sobreposto a ela, como num perfil de rede social. */}
+          <Card style={styles.cartaoPerfil}>
+            <View style={styles.capa}>
+              <FundoCartao de={theme.brandSoft} para={theme.fieldGradientTo} />
+              <AneisMarca />
+            </View>
+            <View style={styles.perfilCorpo}>
+              <View style={[styles.avatarAnel, { borderColor: theme.backgroundElement }]}>
+                <Svg width={72} height={72} viewBox="0 0 72 72" accessibilityLabel={`Avatar de ${perfil.full_name}`}>
+                  <Defs>
+                    <LinearGradient id="avatarVerde" x1="0" y1="0" x2="1" y2="1">
+                      <Stop offset="0" stopColor={theme.gradientFrom} />
+                      <Stop offset="1" stopColor={theme.gradientTo} />
+                    </LinearGradient>
+                  </Defs>
+                  <Circle cx="36" cy="36" r="36" fill="url(#avatarVerde)" />
+                  <SvgText
+                    x="36"
+                    y="46"
+                    textAnchor="middle"
+                    fill={Palette.graphite}
+                    fontSize={FontSize.heading}
+                    fontFamily={JakartaFamilies[800]}>
+                    {iniciais(perfil.full_name)}
+                  </SvgText>
+                </Svg>
+              </View>
               <View style={styles.identidadeTextos}>
                 <ThemedText type="large" style={styles.nome}>{perfil.full_name}</ThemedText>
-                <ThemedText type="small" style={{ color: TEXTO_SUAVE }}>@{perfil.username}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">@{perfil.username}</ThemedText>
               </View>
+              {resumo && (
+                <View style={styles.resumo}>
+                  <Badge label={`${resumo.familias} ${resumo.familias === 1 ? 'família' : 'famílias'}`} tom="marca" />
+                  <Badge label={`${resumo.amigos} ${resumo.amigos === 1 ? 'amigo' : 'amigos'}`} />
+                </View>
+              )}
             </View>
-
-            <View style={styles.divisoria} />
-
-            <View style={styles.tagLinha}>
-              <ThemedText type="smallBold" style={styles.tagRotulo}>Sua tag de amizade</ThemedText>
-              <ActionPill
-                label="Copiar"
-                icone="copy-outline"
-                variante="translucido"
-                altura={44}
-                onPress={copiarTag}
-                accessibilityLabel={`Copiar tag de amizade ${perfil.friend_code}`}
-              />
-            </View>
-            <ThemedText selectable style={styles.codigo}>{perfil.friend_code}</ThemedText>
-            <ThemedText type="small" style={{ color: TEXTO_SUAVE }}>
-              Compartilhe esta tag para seus amigos encontrarem você na Comunidade.
-            </ThemedText>
-          </View>
+          </Card>
 
           <Card>
             <View style={styles.cabecalhoCard}>
               <ThemedText type="large" style={styles.tituloCard}>Informações pessoais</ThemedText>
-              {!editando && <ActionPill label="Editar" variante="contorno" altura={44} onPress={() => setEditando(true)} />}
+              {/* A mesma pílula, de largura fixa, alterna entre "Editar" e "Cancelar":
+                  o cabeçalho não se mexe na troca. */}
+              <ActionPill
+                label={editando ? 'Cancelar' : 'Editar'}
+                variante="contorno"
+                altura={44}
+                largura={92}
+                onPress={editando ? cancelarEdicao : () => setEditando(true)}
+              />
             </View>
 
-            {editando ? (
-              <View style={styles.formulario}>
-                <IconField sobreCartao label="Nome completo" icon="person-outline" value={nome} onChangeText={setNome} autoCapitalize="words" maxLength={80} />
-                <IconField sobreCartao label="Nome de usuário" icon="at-outline" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} maxLength={30} />
-                <IconField sobreCartao label="Telefone" icon="call-outline" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="(81) 99999-8888" />
-                <View style={styles.acoes}>
-                  <PrimaryButton label="Salvar alterações" onPress={salvar} loading={salvando} />
-                  <SecondaryButton label="Cancelar" onPress={cancelarEdicao} />
+            {/* A altura do cartão desliza entre os modos; cada linha entra em sequência. */}
+            <AlturaAnimada folga={Spacing.two} chave={editando ? 'editar' : 'ver'}>
+              {editando ? (
+                <View key="editar" style={styles.formulario}>
+                  <Entrada rapida indice={0}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      É assim que seus amigos encontram você.
+                    </ThemedText>
+                  </Entrada>
+                  <Entrada rapida indice={1}>
+                    <IconField sobreCartao label="Nome completo" icon="user" value={nome} onChangeText={setNome} autoCapitalize="words" autoComplete="name" textContentType="name" maxLength={80} returnKeyType="next" onSubmitEditing={() => campoUsername.current?.focus()} />
+                  </Entrada>
+                  <Entrada rapida indice={2}>
+                    <IconField ref={campoUsername} sobreCartao label="Nome de usuário" icon="at-sign" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} maxLength={30} returnKeyType="next" onSubmitEditing={() => campoTelefone.current?.focus()} />
+                  </Entrada>
+                  <Entrada rapida indice={3}>
+                    <IconField ref={campoTelefone} sobreCartao label="Telefone" icon="phone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" inputMode="tel" autoComplete="tel" textContentType="telephoneNumber" placeholder="(81) 99999-8888" returnKeyType="done" onSubmitEditing={() => void salvar()} />
+                  </Entrada>
+                  <Entrada rapida indice={4}>
+                    <View style={styles.acoes}>
+                      <PrimaryButton label="Salvar alterações" onPress={salvar} loading={salvando} />
+                    </View>
+                  </Entrada>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.dados}>
-                <Campo label="E-mail" valor={session?.user.email ?? '—'} />
-                <Campo label="Telefone" valor={perfil.phone} />
-                <Campo label="Username" valor={`@${perfil.username}`} />
-              </View>
-            )}
+              ) : (
+                <View key="ver" style={styles.dados}>
+                  <Entrada rapida indice={0}><Campo label="E-mail" valor={session?.user.email ?? '—'} /></Entrada>
+                  <Entrada rapida indice={1}><Campo label="Telefone" valor={perfil.phone} /></Entrada>
+                  <Entrada rapida indice={2}><Campo label="Username" valor={`@${perfil.username}`} /></Entrada>
+                  <Entrada rapida indice={3}>
+                    <Campo
+                      label="Tag de amizade"
+                      valor={perfil.friend_code}
+                      acao={
+                        <IconButton
+                          icone="copy"
+                          rotulo={`Copiar tag de amizade ${perfil.friend_code}`}
+                          variante="contorno"
+                          tamanho={44}
+                          onPress={copiarTag}
+                        />
+                      }
+                    />
+                  </Entrada>
+                </View>
+              )}
+            </AlturaAnimada>
           </Card>
 
           <Card>
@@ -209,12 +242,10 @@ export default function PerfilScreen() {
                   Use o fundo claro e verde do aplicativo.
                 </ThemedText>
               </View>
-              <Switch
+              <Toggle
                 accessibilityLabel="Ativar tema claro"
                 value={mode === 'light'}
                 onValueChange={(claro) => setMode(claro ? 'light' : 'dark')}
-                trackColor={{ false: theme.backgroundSelected, true: theme.gradientFrom }}
-                thumbColor={Palette.white}
               />
             </View>
           </Card>
@@ -226,43 +257,40 @@ export default function PerfilScreen() {
   );
 }
 
-function Campo({ label, valor }: { label: string; valor: string }) {
+function Campo({ label, valor, acao }: { label: string; valor: string; acao?: ReactNode }) {
   return (
-    <View style={styles.campo}>
-      <ThemedText type="small" themeColor="textSecondary">{label}</ThemedText>
-      <ThemedText selectable style={styles.valor}>{valor}</ThemedText>
+    <View style={styles.campoLinha}>
+      <View style={styles.campo}>
+        <ThemedText type="small" themeColor="textSecondary">{label}</ThemedText>
+        <ThemedText selectable style={styles.valor}>{valor}</ThemedText>
+      </View>
+      {acao}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cartaoEscuro: {
-    borderRadius: Radii.huge,
-    padding: Spacing.four,
-    gap: Spacing.three,
-    overflow: 'hidden',
-    backgroundColor: Palette.graphite,
+  cartaoPerfil: { padding: 0, gap: 0 },
+  capa: { height: 88, overflow: 'hidden' },
+  perfilCorpo: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.four, gap: Spacing.three },
+  // Anel na cor do cartão: o avatar parece "recortado" sobre a capa.
+  avatarAnel: {
+    alignSelf: 'flex-start',
+    marginTop: -40,
+    borderWidth: 4,
+    borderRadius: Radii.pill,
   },
-  aneis: { position: 'absolute', top: 0, right: 0 },
-  identidade: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  resumo: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   identidadeTextos: { flex: 1, gap: Spacing.one },
-  nome: { color: Palette.white, fontWeight: 700 },
-  divisoria: { height: 1, backgroundColor: DIVISORIA },
-  tagLinha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.three },
-  tagRotulo: { flex: 1, color: TEXTO_SUAVE, fontWeight: 600 },
-  codigo: {
-    color: Palette.white,
-    fontSize: FontSize.display,
-    lineHeight: LineHeight.display,
-    fontWeight: 800,
-    letterSpacing: FontSize.display * 0.12,
-  },
+  nome: { fontWeight: 700 },
   cabecalhoCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   tituloCard: { flex: 1, fontWeight: 700 },
-  formulario: { gap: Spacing.two },
-  acoes: { gap: Spacing.two, marginTop: Spacing.two },
+  // 16 entre campos e 24 antes do botão: o formulário respira dentro do cartão.
+  formulario: { gap: Spacing.three },
+  acoes: { marginTop: Spacing.two },
   dados: { gap: Spacing.three },
-  campo: { gap: Spacing.half },
+  campoLinha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  campo: { flex: 1, gap: Spacing.half },
   valor: { fontWeight: 600 },
   temaLinha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   temaTextos: { flex: 1, gap: Spacing.one },

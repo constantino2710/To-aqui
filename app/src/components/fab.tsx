@@ -1,32 +1,34 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { type ComponentProps } from 'react';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icone, type NomeIcone } from '@/components/icone';
 import { PressableScale } from '@/components/pressable-scale';
 import { Radii, Spacing } from '@/constants/theme';
+import { useEspacoBarra } from '@/hooks/use-espaco-barra';
 import { useTheme } from '@/hooks/use-theme';
 
 export type FabProps = {
   onPress: () => void;
   /** Descrição para leitores de tela, ex.: "Criar família". */
   accessibilityLabel: string;
-  /** Ícone do Ionicons. Padrão: "add". */
-  icone?: ComponentProps<typeof Ionicons>['name'];
+  /** Ícone (ver `Icone`). Padrão: "plus". */
+  icone?: NomeIcone;
   /** Quando a tela NÃO está dentro das abas, soma a área segura de baixo. */
   semBarraDeAbas?: boolean;
 };
 
 /**
  * Botão de ação flutuante: círculo grafite de 56 px no canto inferior direito.
- * Dentro das abas, a barra inferior fica no fluxo (abaixo da tela), então 16 px
- * de folga já deixam o botão logo acima dela.
+ * Dentro das abas, a barra inferior flutua sobre a tela, então o botão sobe
+ * a altura dela (ver `useEspacoBarra`) mais 16 px de folga.
  */
-export function Fab({ onPress, accessibilityLabel, icone = 'add', semBarraDeAbas = false }: FabProps) {
+export function Fab({ onPress, accessibilityLabel, icone = 'plus', semBarraDeAbas = false }: FabProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const espacoBarra = useEspacoBarra();
 
-  const bottom = semBarraDeAbas ? insets.bottom + Spacing.three : Spacing.three;
+  // Dentro das abas, fica 16 px acima da barra flutuante.
+  const bottom = semBarraDeAbas ? insets.bottom + Spacing.three : espacoBarra + Spacing.three;
 
   return (
     <PressableScale
@@ -34,8 +36,8 @@ export function Fab({ onPress, accessibilityLabel, icone = 'add', semBarraDeAbas
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       externo={[styles.posicao, { right: Spacing.four, bottom }]}
-      style={[styles.fab, { backgroundColor: theme.action }]}>
-      <Ionicons name={icone} size={30} color={theme.onAction} />
+      style={[styles.fab, { backgroundColor: theme.action, boxShadow: `0 10px 24px ${theme.shadowStrong}` }]}>
+      <Icone nome={icone} tamanho={30} cor={theme.onAction} />
     </PressableScale>
   );
 }
@@ -51,7 +53,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 10px 24px rgba(30, 35, 32, 0.28)',
     elevation: 6,
   },
 });

@@ -1,13 +1,12 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
+import { Icone, type NomeIcone } from '@/components/icone';
 import { PressableScale } from '@/components/pressable-scale';
-import { Radii } from '@/constants/theme';
+import { Palette, Radii } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type IconButtonProps = {
-  icone: ComponentProps<typeof Ionicons>['name'];
+  icone: NomeIcone;
   onPress: () => void;
   /** Obrigatório: botão só de ícone precisa de nome para leitores de tela. */
   rotulo: string;
@@ -16,8 +15,9 @@ export type IconButtonProps = {
    * - `claro`: círculo branco, ícone escuro (editar nome)
    * - `contorno`: só contorno cinza (fechar, configurar)
    * - `perigo`: contorno vermelho (recusar)
+   * - `vidro`: grafite translúcido, para cartões coloridos (ingresso da tag)
    */
-  variante?: 'escuro' | 'claro' | 'contorno' | 'perigo';
+  variante?: 'escuro' | 'claro' | 'contorno' | 'perigo' | 'vidro';
   /** Diâmetro: 48 (padrão), 44 ou 56 (busca). */
   tamanho?: 44 | 48 | 56;
   loading?: boolean;
@@ -38,9 +38,21 @@ export function IconButton({
   const inativo = disabled || loading;
 
   const fundo =
-    variante === 'escuro' ? theme.action : variante === 'claro' ? theme.backgroundElement : 'transparent';
+    variante === 'escuro'
+      ? theme.action
+      : variante === 'claro'
+        ? theme.backgroundElement
+        : variante === 'vidro'
+          ? Palette.graphiteGlass
+          : 'transparent';
   const cor =
-    variante === 'escuro' ? theme.onAction : variante === 'perigo' ? theme.danger : theme.text;
+    variante === 'escuro'
+      ? theme.onAction
+      : variante === 'perigo'
+        ? theme.danger
+        : variante === 'vidro'
+          ? Palette.graphite
+          : theme.text;
   const borda = variante === 'perigo' ? theme.danger : variante === 'contorno' ? theme.border : undefined;
 
   return (
@@ -60,7 +72,7 @@ export function IconButton({
       {loading ? (
         <ActivityIndicator color={cor} size="small" />
       ) : (
-        <Ionicons name={icone} size={tamanho === 56 ? 22 : 20} color={cor} />
+        <Icone nome={icone} tamanho={tamanho === 56 ? 22 : 20} cor={cor} />
       )}
     </PressableScale>
   );

@@ -1,28 +1,34 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icone } from '@/components/icone';
 import { ThemedText } from '@/components/themed-text';
 import { Motion } from '@/constants/motion';
 import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
+import { EspacoBarraContext } from '@/hooks/use-espaco-barra';
 import { useLocationAlerts } from '@/hooks/use-location-alerts';
 import { useMovimentoReduzido } from '@/hooks/use-movimento-reduzido';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
 
 const ABAS = [
-  { nome: 'comunidade', titulo: 'Comunidade', ativo: 'people', inativo: 'people-outline' },
-  { nome: 'index', titulo: 'Início', ativo: 'home', inativo: 'home-outline' },
-  { nome: 'perfil', titulo: 'Perfil', ativo: 'person', inativo: 'person-outline' },
+  { nome: 'comunidade', titulo: 'Comunidade', ativo: 'users', inativo: 'users' },
+  { nome: 'index', titulo: 'Início', ativo: 'home', inativo: 'home' },
+  { nome: 'perfil', titulo: 'Perfil', ativo: 'user', inativo: 'user' },
 ] as const;
 
 export default function AppLayout() {
   useLocationAlerts();
   usePushNotifications();
+  const insets = useSafeAreaInsets();
+  // A barra flutua sobre as telas; elas reservam esse espaço no fim da rolagem.
+  const espacoBarra = ALTURA_ABA + PADDING * 2 + margemInferior(insets.bottom);
+
   return (
+    <EspacoBarraContext.Provider value={espacoBarra}>
     <Tabs
       initialRouteName="index"
       screenOptions={{
@@ -38,6 +44,7 @@ export default function AppLayout() {
       <Tabs.Screen name="configurar-familia" options={{ href: null }} />
       <Tabs.Screen name="qr-code" options={{ href: null }} />
     </Tabs>
+    </EspacoBarraContext.Provider>
   );
 }
 
@@ -48,14 +55,16 @@ const RAZAO = 2.2;
 const ALTURA_ABA = 48;
 const ESTICAR = 14; // quanto a pílula estica no meio do deslize (morph)
 const GAP_ROTULO = Spacing.two;
-// Largura do rótulo em 14/700: estimativa por caractere (evita medir o texto).
-const larguraRotulo = (titulo: string) => Math.ceil(titulo.length * 8.4);
+// Distância da barra até a base da tela: a área segura, com no mínimo 24.
+const margemInferior = (areaSegura: number) => Math.max(areaSegura, Spacing.four);
+// Estimativa da largura do rótulo em 14/700, usada só até a medição real chegar.
+const larguraEstimada = (titulo: string) => Math.ceil(titulo.length * 9.6);
 
 /**
  * Barra flutuante: pílula grafite com UMA pílula branca que desliza até a aba
  * escolhida (e estica um pouco no caminho). As abas ao redor abrem e fecham
- * espaço no mesmo ritmo. Fica no fluxo, abaixo das telas e sobre o mesmo fundo
- * delas — por isso o conteúdo nunca passa por baixo dela.
+ * espaço no mesmo ritmo. Flutua sobre as telas, sem fundo próprio: o conteúdo
+ * rola por trás dela, e o `Screen` reserva espaço para o fim da lista.
  */
 function BarraInferior({ state, navigation }: BottomTabBarProps) {
   const theme = useTheme();
@@ -67,6 +76,9 @@ function BarraInferior({ state, navigation }: BottomTabBarProps) {
   const indiceAtivo = indiceEncontrado >= 0 ? indiceEncontrado : 1;
 
   const [largura, setLargura] = useState(0);
+  const tecladoAberto = useTecladoAberto();
+  // Largura real de cada rótulo, medida fora da tela (a fonte varia por plataforma).
+  const [rotulos, setRotulos] = useState<Record<string, number>>({});
   // Posição contínua do destaque: 0 = primeira aba, 1 = segunda, 2 = terceira.
   const [pos] = useState(() => new Animated.Value(indiceAtivo));
 
@@ -106,16 +118,19 @@ function BarraInferior({ state, navigation }: BottomTabBarProps) {
     }
   });
 
+  // No Android a tela encolhe com o teclado e a barra subiria junto, cobrindo o
+  // campo em foco; enquanto o teclado está aberto ela sai de cena.
+  if (tecladoAberto) return null;
+
   return (
-    <View
-      style={[
-        styles.area,
-        { backgroundColor: theme.background, paddingBottom: Math.max(insets.bottom, Spacing.four) },
-      ]}>
+    <View pointerEvents="box-none" style={[styles.area, { paddingBottom: margemInferior(insets.bottom) }]}>
       <View
         accessibilityRole="tablist"
         onLayout={(e) => setLargura(e.nativeEvent.layout.width)}
-        style={[styles.barra, { backgroundColor: theme.action, opacity: largura > 0 ? 1 : 0 }]}>
+        style={[
+          styles.barra,
+          { backgroundColor: theme.action, boxShadow: `0 12px 32px -6px ${theme.shadow}`, opacity: largura > 0 ? 1 : 0 },
+        ]}>
         <Animated.View
           pointerEvents="none"
           style={[
@@ -127,6 +142,22 @@ function BarraInferior({ state, navigation }: BottomTabBarProps) {
             },
           ]}
         />
+        {/* Medidor invisível: cada rótulo na largura natural, sem corte. */}
+        <View style={styles.medidor} pointerEvents="none" aria-hidden>
+          {ABAS.map((aba) => (
+            <ThemedText
+              key={aba.nome}
+              style={[styles.rotulo, styles.medida]}
+              onLayout={(e) => {
+                // O navegador arredonda a medida (88,4 vira 88) e a fração cortaria
+                // o rótulo com reticências; a folga de 2 px evita isso.
+                const w = Math.ceil(e.nativeEvent.layout.width) + 2;
+                setRotulos((atual) => (atual[aba.nome] === w ? atual : { ...atual, [aba.nome]: w }));
+              }}>
+              {aba.titulo}
+            </ThemedText>
+          ))}
+        </View>
         <View style={styles.abas}>
           {ABAS.map((aba, indice) => (
             <BotaoAba
@@ -136,6 +167,7 @@ function BarraInferior({ state, navigation }: BottomTabBarProps) {
               pos={pos}
               larguraInativa={larguraInativa}
               larguraAtiva={larguraAtiva}
+              larguraTexto={rotulos[aba.nome] ?? larguraEstimada(aba.titulo)}
               ativo={indice === indiceAtivo}
               onPress={() => {
                 const rota = state.routes.find((item) => item.name === aba.nome);
@@ -155,6 +187,21 @@ function BarraInferior({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+/** `true` enquanto o teclado do Android está aberto (no iOS ele cobre a barra). */
+function useTecladoAberto() {
+  const [aberto, setAberto] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const abrir = Keyboard.addListener('keyboardDidShow', () => setAberto(true));
+    const fechar = Keyboard.addListener('keyboardDidHide', () => setAberto(false));
+    return () => {
+      abrir.remove();
+      fechar.remove();
+    };
+  }, []);
+  return aberto;
+}
+
 type Aba = (typeof ABAS)[number];
 
 function BotaoAba({
@@ -163,6 +210,7 @@ function BotaoAba({
   pos,
   larguraInativa,
   larguraAtiva,
+  larguraTexto,
   ativo,
   onPress,
 }: {
@@ -171,6 +219,7 @@ function BotaoAba({
   pos: Animated.Value;
   larguraInativa: number;
   larguraAtiva: number;
+  larguraTexto: number;
   ativo: boolean;
   onPress: () => void;
 }) {
@@ -189,7 +238,6 @@ function BotaoAba({
     outputRange: [0, 1, 0],
     extrapolate: 'clamp',
   });
-  const larguraTexto = larguraRotulo(aba.titulo);
   const espacoRotulo = pos.interpolate({
     inputRange: [i - 1, i, i + 1],
     outputRange: [0, larguraTexto, 0],
@@ -212,10 +260,10 @@ function BotaoAba({
         <View style={styles.icone}>
           {/* Ícone vazado (claro) some e o preenchido (grafite) aparece sobre o destaque. */}
           <Animated.View style={[styles.camadaIcone, { opacity: Animated.subtract(1, proximidade) }]}>
-            <Ionicons name={aba.inativo as keyof typeof Ionicons.glyphMap} size={22} color={theme.onAction} />
+            <Icone nome={aba.inativo} tamanho={22} cor={theme.onAction} />
           </Animated.View>
           <Animated.View style={[styles.camadaIcone, { opacity: proximidade }]}>
-            <Ionicons name={aba.ativo as keyof typeof Ionicons.glyphMap} size={22} color={theme.action} />
+            <Icone nome={aba.ativo} tamanho={22} cor={theme.action} />
           </Animated.View>
         </View>
         <Animated.View
@@ -233,7 +281,10 @@ function BotaoAba({
 
 const styles = StyleSheet.create({
   area: {
-    paddingTop: Spacing.two,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
   },
@@ -274,6 +325,21 @@ const styles = StyleSheet.create({
     left: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Fica dentro da largura da barra (e recortado): um medidor mais largo que a
+  // tela faria o navegador do celular alargar a página e permitir rolagem extra.
+  medidor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: ALTURA_ABA,
+    overflow: 'hidden',
+    opacity: 0,
+    alignItems: 'flex-start',
+  },
+  medida: {
+    alignSelf: 'flex-start',
   },
   rotulo: {
     fontSize: FontSize.small,

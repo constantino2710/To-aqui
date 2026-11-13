@@ -15,6 +15,12 @@
     --foreground: 144 8% 13%;
 
     --card: 0 0% 100%;
+    --card-gradient: 147 33% 94%;
+    --field-gradient-from: 96 14% 93%;
+    --field-gradient-to: 212 30% 92%;
+    --toggle-track: 108 7% 87%;
+    --warning: 26 86% 38%;
+    --warning-soft: 29 81% 94%;
     --card-foreground: 144 8% 13%;
 
     --primary: 144 8% 13%;
@@ -53,6 +59,12 @@
       --foreground: 90 7% 95%;
 
       --card: 144 8% 12%;
+      --card-gradient: 154 17% 16%;
+      --field-gradient-from: 146 9% 15%;
+      --field-gradient-to: 215 22% 15%;
+      --toggle-track: 147 7% 25%;
+      --warning: 31 87% 72%;
+      --warning-soft: 33 42% 16%;
       --card-foreground: 90 7% 95%;
 
       --primary: 90 7% 95%;
@@ -78,4 +90,37 @@
       --ring: 157 47% 57%;
     }
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Barra de rolagem (só na web). A nativa ocupa largura e descentraliza o
+   layout, então fica escondida; as telas desenham um indicador próprio que
+   flutua sobre o conteúdo e some quando parado (ver indicador-rolagem.tsx).
+   --------------------------------------------------------------------------- */
+* {
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Foco pelo teclado (só na web): anel verde arredondado, com folga, no lugar do
+   retângulo preto padrão. 28 px acompanha os cartões e vira pílula nos botões
+   (o navegador limita o raio à metade da altura). Com mouse/toque não aparece.
+   --------------------------------------------------------------------------- */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+[role='button']:focus-visible,
+[role='link']:focus-visible,
+[role='tab']:focus-visible,
+[role='switch']:focus-visible {
+  outline: 2px solid hsl(var(--ring) / 0.7);
+  outline-offset: 3px;
+  border-radius: 28px;
 }

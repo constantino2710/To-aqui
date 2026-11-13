@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, CircleAlert, MapPin, ShieldCheck } from 'lucide-react';
+import { Check, CircleAlert, EyeOff, Hand, MapPin, UserRoundX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { FoundLogo } from './found-logo';
 import { LiveMap } from './live-map';
+import { Radar } from './radar';
+import { BotaoTema } from './tema';
 import { supabase } from './supabase';
 
 type Estado = 'introducao' | 'iniciando' | 'ativo' | 'parando' | 'encerrado' | 'erro';
@@ -17,6 +19,12 @@ type MapResult = {
   responsible_lat: number | null;
   responsible_lng: number | null;
 };
+
+const GARANTIAS = [
+  { Icone: UserRoundX, titulo: 'Sem cadastro', texto: 'Não pedimos seu nome, telefone nem qualquer dado pessoal.' },
+  { Icone: Hand, titulo: 'Você decide quando parar', texto: 'Um toque encerra o compartilhamento na hora.' },
+  { Icone: EyeOff, titulo: 'Só a família vê', texto: 'A posição vai apenas para os responsáveis deste QR Code.' },
+];
 
 export function App() {
   const [estado, setEstado] = useState<Estado>('introducao');
@@ -125,8 +133,10 @@ export function App() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[34rem] flex-col gap-6 px-6 py-6">
-      <header className="animate-fade-up">
-        <FoundLogo />
+      {/* A marca em destaque: é ela que diz a quem encontrou o QR que o link é confiável. */}
+      <header className="flex animate-fade-up items-center justify-between gap-4 px-2 pb-2 pt-4">
+        <FoundLogo size={56} />
+        <BotaoTema />
       </header>
 
       <div className="flex animate-fade-up flex-col gap-2 px-2 [animation-delay:50ms]">
@@ -138,6 +148,10 @@ export function App() {
 
       <Card aria-labelledby="titulo" className="animate-fade-up [animation-delay:100ms]">
         <div key={grupo} className="flex animate-fade-in flex-col gap-4">
+          {/* Antes de começar, a ilustração explica o pedido; depois, o ícone de estado. */}
+          {grupo === 'inicio' ? (
+            <Radar />
+          ) : (
           <span
             className={cn(
               'relative m-2 grid size-16 place-items-center rounded-full',
@@ -153,6 +167,7 @@ export function App() {
             )}
             {encerrado ? <Check className="size-7" strokeWidth={2.4} /> : <MapPin className="size-7" strokeWidth={1.8} />}
           </span>
+          )}
 
           <div className="flex flex-col gap-2">
             <h2 id="titulo" className="text-lg font-bold leading-[26px]">{titulo}</h2>
@@ -188,8 +203,8 @@ export function App() {
         <section aria-labelledby="mapa" className="flex animate-fade-up flex-col gap-2">
           <h2 id="mapa" className="px-2 text-lg font-bold leading-[26px]">No mapa</h2>
           <p className="px-2 pb-2 text-sm text-muted-foreground">
-            <strong className="font-semibold text-secondary-foreground">Verde</strong> é a sua posição.{' '}
-            <strong className="font-semibold text-destructive">Vermelho</strong> é a família.
+            O <strong className="font-semibold text-secondary-foreground">pin do Found</strong> é você.{' '}
+            O <strong className="font-semibold text-foreground">círculo com pessoas</strong> é a família.
           </p>
           <LiveMap finder={finder} responsible={responsible} />
           {!responsible && (
@@ -200,9 +215,21 @@ export function App() {
         </section>
       )}
 
-      <aside className="flex animate-fade-up gap-4 px-2 text-sm text-muted-foreground [animation-delay:150ms]">
-        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-secondary-foreground" strokeWidth={1.8} aria-hidden="true" />
-        <p>Você pode parar quando quiser. Não pedimos seu nome, telefone nem qualquer dado pessoal.</p>
+      {/* Garantias: quem abre o link é um desconhecido; a confiança vem primeiro. */}
+      <aside aria-label="Sua privacidade" className="animate-fade-up [animation-delay:150ms]">
+        <ul className="flex flex-col gap-3">
+          {GARANTIAS.map(({ Icone, titulo, texto }) => (
+            <li key={titulo} className="flex items-center gap-4 px-2">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary text-secondary-foreground" aria-hidden="true">
+                <Icone className="size-5" strokeWidth={1.8} />
+              </span>
+              <p className="text-sm text-muted-foreground">
+                <strong className="block text-base font-semibold text-foreground">{titulo}</strong>
+                {texto}
+              </p>
+            </li>
+          ))}
+        </ul>
       </aside>
     </main>
   );
