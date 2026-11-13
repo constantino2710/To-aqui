@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, MapPin, ShieldCheck } from 'lucide-react';
+import { Check, CircleAlert, EyeOff, Hand, MapPin, UserRoundX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { FoundLogo } from './found-logo';
 import { LiveMap } from './live-map';
+import { Radar } from './radar';
+import { BotaoTema } from './tema';
 import { supabase } from './supabase';
 
 type Estado = 'introducao' | 'iniciando' | 'ativo' | 'parando' | 'encerrado' | 'erro';
@@ -16,6 +19,12 @@ type MapResult = {
   responsible_lat: number | null;
   responsible_lng: number | null;
 };
+
+const GARANTIAS = [
+  { Icone: UserRoundX, titulo: 'Sem cadastro', texto: 'Não pedimos seu nome, telefone nem qualquer dado pessoal.' },
+  { Icone: Hand, titulo: 'Você decide quando parar', texto: 'Um toque encerra o compartilhamento na hora.' },
+  { Icone: EyeOff, titulo: 'Só a família vê', texto: 'A posição vai apenas para os responsáveis deste QR Code.' },
+];
 
 export function App() {
   const [estado, setEstado] = useState<Estado>('introducao');
@@ -119,76 +128,108 @@ export function App() {
   const titulo = ativo ? 'Localização sendo enviada' : encerrado ? 'Compartilhamento encerrado' : 'Compartilhar localização';
   const textoPadrao = 'Ao continuar, o navegador vai pedir sua permissão. Só os responsáveis desta família verão a posição enviada.';
 
+  const grupo = ativo ? 'ativo' : encerrado ? 'encerrado' : 'inicio';
+  const mostrarErro = estado === 'erro';
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[34rem] flex-col gap-7 px-4 py-12">
-      <header className="flex flex-col gap-3 animate-fade-up">
-        <div className="flex items-center gap-2 text-primary">
-          <MapPin className="size-5" aria-hidden="true" />
-          <span className="text-lg font-semibold tracking-tight">To Aqui</span>
-        </div>
-        <h1 className="text-[2.1rem] font-semibold leading-[1.1] tracking-tight text-foreground">
-          Você encontrou este QR Code?
-        </h1>
-        <p className="text-lg leading-relaxed text-muted-foreground">
-          Ajude esta família compartilhando sua localização. É rápido, seguro e você decide quando parar.
-        </p>
+    <main className="mx-auto flex min-h-screen w-full max-w-[34rem] flex-col gap-6 px-6 py-6">
+      {/* A marca em destaque: é ela que diz a quem encontrou o QR que o link é confiável. */}
+      <header className="flex animate-fade-up items-center justify-between gap-4 px-2 pb-2 pt-4">
+        <FoundLogo size={56} />
+        <BotaoTema />
       </header>
 
-      <Card className="animate-fade-up [animation-delay:80ms]">
-        <CardHeader className="items-start gap-4">
+      <div className="flex animate-fade-up flex-col gap-2 px-2 [animation-delay:50ms]">
+        <h1 className="text-[28px] font-bold leading-[34px] tracking-[-0.03em]">Você encontrou este QR Code?</h1>
+        <p className="text-base text-muted-foreground">
+          Ajude esta família compartilhando sua localização. É rápido, seguro e você decide quando parar.
+        </p>
+      </div>
+
+      <Card aria-labelledby="titulo" className="animate-fade-up [animation-delay:100ms]">
+        <div key={grupo} className="flex animate-fade-in flex-col gap-4">
+          {/* Antes de começar, a ilustração explica o pedido; depois, o ícone de estado. */}
+          {grupo === 'inicio' ? (
+            <Radar />
+          ) : (
           <span
             className={cn(
-              'relative grid size-16 place-items-center rounded-[1.25rem] text-primary',
-              encerrado ? 'bg-primary text-primary-foreground' : 'bg-secondary',
+              'relative m-2 grid size-16 place-items-center rounded-full',
+              encerrado ? 'bg-gradient-to-br from-[#3FA584] to-[#6CC160] text-primary' : 'bg-secondary text-secondary-foreground',
             )}
             aria-hidden="true"
           >
             {ativo && (
-              <span className="absolute inset-0 rounded-[1.25rem] bg-primary/30 animate-pulse-ring" />
+              <>
+                <span className="absolute -inset-2 animate-pulse-ring rounded-full border-[1.5px] border-ring opacity-45" />
+                <span className="absolute -inset-4 animate-pulse-ring rounded-full border-[1.5px] border-ring opacity-20 [animation-delay:600ms]" />
+              </>
             )}
-            {encerrado ? <Check className="size-8" /> : <MapPin className="size-8" />}
+            {encerrado ? <Check className="size-7" strokeWidth={2.4} /> : <MapPin className="size-7" strokeWidth={1.8} />}
           </span>
-          <CardTitle>{titulo}</CardTitle>
-          <p className="text-base leading-relaxed text-muted-foreground">{mensagem || textoPadrao}</p>
-        </CardHeader>
+          )}
 
-        <CardFooter>
+          <div className="flex flex-col gap-2">
+            <h2 id="titulo" className="text-lg font-bold leading-[26px]">{titulo}</h2>
+            {mostrarErro && mensagem ? (
+              <p role="alert" className="flex gap-2 rounded-[22px] bg-destructive/10 p-4 text-base font-semibold text-destructive">
+                <CircleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                {mensagem}
+              </p>
+            ) : (
+              <p className="text-base text-muted-foreground">{mensagem || textoPadrao}</p>
+            )}
+          </div>
+
           {(estado === 'introducao' || estado === 'erro') && (
-            <Button className="w-full" onClick={iniciar}>
+            <Button className="mt-2 w-full" onClick={iniciar}>
               Compartilhar minha localização
             </Button>
           )}
           {estado === 'iniciando' && (
-            <Button className="w-full" disabled>
+            <Button className="mt-2 w-full" disabled>
               Iniciando…
             </Button>
           )}
           {ativo && (
-            <>
-              <Button variant="destructive" className="w-full" onClick={parar} disabled={estado === 'parando'}>
-                {estado === 'parando' ? 'Encerrando…' : 'Parar de compartilhar'}
-              </Button>
-              <CardContent className="w-full p-0 pt-2">
-                <h2 className="mb-1 text-base font-semibold">No mapa</h2>
-                <p className="mb-3 text-sm text-muted-foreground">
-                  <span className="font-medium text-primary">Verde</span> é a sua posição.{' '}
-                  <span className="font-medium text-destructive">Vermelho</span> é a família.
-                </p>
-                <LiveMap finder={finder} responsible={responsible} />
-                {!responsible && (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Aguardando a família abrir o mapa no aplicativo.
-                  </p>
-                )}
-              </CardContent>
-            </>
+            <Button variant="destructive" className="mt-2 w-full" onClick={parar} disabled={estado === 'parando'}>
+              {estado === 'parando' ? 'Encerrando…' : 'Parar de compartilhar'}
+            </Button>
           )}
-        </CardFooter>
+        </div>
       </Card>
 
-      <aside className="flex items-start gap-3 px-1 text-sm leading-relaxed text-muted-foreground animate-fade-up [animation-delay:160ms]">
-        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-        <p>Você pode parar quando quiser. Não pedimos seu nome, telefone nem qualquer dado pessoal.</p>
+      {ativo && (
+        <section aria-labelledby="mapa" className="flex animate-fade-up flex-col gap-2">
+          <h2 id="mapa" className="px-2 text-lg font-bold leading-[26px]">No mapa</h2>
+          <p className="px-2 pb-2 text-sm text-muted-foreground">
+            O <strong className="font-semibold text-secondary-foreground">pin do Found</strong> é você.{' '}
+            O <strong className="font-semibold text-foreground">círculo com pessoas</strong> é a família.
+          </p>
+          <LiveMap finder={finder} responsible={responsible} />
+          {!responsible && (
+            <p className="px-2 pt-2 text-sm text-muted-foreground">
+              Aguardando a família abrir o mapa no aplicativo.
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Garantias: quem abre o link é um desconhecido; a confiança vem primeiro. */}
+      <aside aria-label="Sua privacidade" className="animate-fade-up [animation-delay:150ms]">
+        <ul className="flex flex-col gap-3">
+          {GARANTIAS.map(({ Icone, titulo, texto }) => (
+            <li key={titulo} className="flex items-center gap-4 px-2">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary text-secondary-foreground" aria-hidden="true">
+                <Icone className="size-5" strokeWidth={1.8} />
+              </span>
+              <p className="text-sm text-muted-foreground">
+                <strong className="block text-base font-semibold text-foreground">{titulo}</strong>
+                {texto}
+              </p>
+            </li>
+          ))}
+        </ul>
       </aside>
     </main>
   );

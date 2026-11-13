@@ -8,7 +8,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Palette } from '@/constants/theme';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
-const DURATION = 600;
+const DURATION = 480;
 
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
@@ -16,22 +16,20 @@ export function AnimatedSplashOverlay() {
 
   if (!visible) return null;
 
+  // A abertura some com um fade curto e uma ampliação quase imperceptível
+  // (sem curva elástica), entregando a tela já pronta por baixo.
   const splashKeyframe = new Keyframe({
     0: {
       transform: [{ scale: 1 }],
       opacity: 1,
     },
-    20: {
+    25: {
       opacity: 1,
-    },
-    70: {
-      opacity: 0,
-      easing: Easing.elastic(0.7),
     },
     100: {
       opacity: 0,
-      transform: [{ scale: 1 }],
-      easing: Easing.elastic(0.7),
+      transform: [{ scale: 1.06 }],
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
     },
   });
 

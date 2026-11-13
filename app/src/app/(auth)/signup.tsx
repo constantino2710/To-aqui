@@ -1,13 +1,19 @@
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icone } from '@/components/icone';
+import { Card } from '@/components/card';
+import { Entrada } from '@/components/entrada';
+import { FoundLogo } from '@/components/found-logo';
+import { IconField, type IconFieldStatus } from '@/components/icon-field';
+import { useIndicadorRolagem } from '@/components/indicador-rolagem';
 import { PrimaryButton } from '@/components/primary-button';
-import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { FontSize, LineHeight, Radii, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { emailRedirectTo } from '@/lib/auth';
 import { traduzErroAuth } from '@/lib/auth-errors';
 import {
@@ -26,7 +32,14 @@ const MINIMO_SENHA = 6;
 type StatusUsername = 'vazio' | 'invalido' | 'checando' | 'livre' | 'ocupado' | 'indisponivel';
 
 export default function SignupScreen() {
+  const theme = useTheme();
+  const { propsRolagem, indicador: indicadorRolagem } = useIndicadorRolagem();
   const [nomeCompleto, setNomeCompleto] = useState('');
+  // "Próximo" no teclado leva de um campo ao outro.
+  const campoUsername = useRef<TextInput>(null);
+  const campoTelefone = useRef<TextInput>(null);
+  const campoEmail = useRef<TextInput>(null);
+  const campoSenha = useRef<TextInput>(null);
   const [username, setUsername] = useState('');
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
@@ -137,24 +150,48 @@ export default function SignupScreen() {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, styles.scrollCentro]}>
             <View style={styles.content}>
-              <ThemedText type="subtitle">Confirme seu e-mail</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Enviamos um link de confirmação para{' '}
-                <ThemedText type="smallBold">{email.trim()}</ThemedText>. Abra esse link para
-                ativar sua conta — só depois disso o login funciona.
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Se abrir o link neste mesmo aparelho, o app entra sozinho. Caso contrário, volte
-                aqui e faça login normalmente.
-              </ThemedText>
+              <Entrada indice={0}>
+                <Card style={styles.cartaoEmail}>
+                  <View style={[styles.circulo, { backgroundColor: theme.brandSoft }]}>
+                    <Icone nome="mail" tamanho={40} cor={theme.brand} />
+                  </View>
 
-              <Link href="/login" asChild>
-                <View>
-                  <ThemedText type="linkPrimary">Voltar para o login</ThemedText>
-                </View>
-              </Link>
+                  <View style={styles.titulos}>
+                    <ThemedText type="subtitle" style={styles.centro}>
+                      Confirme seu e-mail
+                    </ThemedText>
+                    <ThemedText themeColor="textSecondary" style={[styles.apoio, styles.centro]}>
+                      Enviamos um link de confirmação para{' '}
+                      <ThemedText style={styles.negrito}>{email.trim()}</ThemedText>. Abra esse
+                      link para ativar sua conta — só depois disso o login funciona.
+                    </ThemedText>
+                  </View>
+
+                  <View style={[styles.dica, { backgroundColor: theme.background }]}>
+                    <Icone
+                      nome="info"
+                      tamanho={20}
+                      cor={theme.brand}
+                      estilo={styles.dicaIcone}
+                    />
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.dicaTexto}>
+                      Se abrir o link neste mesmo aparelho, o app entra sozinho. Caso contrário,
+                      volte aqui e faça login normalmente.
+                    </ThemedText>
+                  </View>
+                </Card>
+              </Entrada>
+
+              <Entrada indice={1}>
+                <Link href="/login" asChild>
+                  <View accessibilityRole="link" style={styles.voltar}>
+                    <Icone nome="arrow-left" tamanho={18} cor={theme.brand} />
+                    <ThemedText type="linkPrimary">Voltar para o login</ThemedText>
+                  </View>
+                </Link>
+              </Entrada>
             </View>
           </ScrollView>
         </SafeAreaView>
@@ -162,39 +199,64 @@ export default function SignupScreen() {
     );
   }
 
+  // Selo sobre a borda do campo. O formato inválido não cabe no selo: vira
+  // texto de erro logo abaixo do campo.
+  const seloUsername: IconFieldStatus | undefined =
+    statusUsername === 'checando'
+      ? { texto: 'Verificando…', tom: 'neutro' }
+      : statusUsername === 'livre'
+        ? { texto: 'Disponível', tom: 'ok' }
+        : statusUsername === 'ocupado'
+          ? { texto: 'Já está em uso', tom: 'erro' }
+          : undefined;
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.safeArea}>
+        {/* iOS: a rolagem abre espaço para o teclado e mostra o campo em foco.
+            Android: a janela encolhe (softwareKeyboardLayoutMode: resize). */}
+        <View style={styles.safeArea}>
           <ScrollView
+            {...propsRolagem}
             contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled">
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive">
             <View style={styles.content}>
-              <View style={styles.cabecalho}>
-                <ThemedText type="subtitle">Criar conta</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Precisamos do seu nome e telefone para que os outros responsáveis da sua
-                  família saibam com quem estão falando. A foto fica para depois.
-                </ThemedText>
-              </View>
+              <Entrada indice={0}>
+                <FoundLogo size={40} />
+              </Entrada>
 
-              <View style={styles.formulario}>
-                <TextField
-                  label="Nome completo"
-                  value={nomeCompleto}
-                  onChangeText={setNomeCompleto}
-                  placeholder="Como você quer ser chamado"
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  textContentType="name"
-                  maxLength={80}
-                />
+              <Entrada indice={1}>
+                <View style={styles.titulos}>
+                  <ThemedText type="subtitle">Criar conta</ThemedText>
+                  <ThemedText themeColor="textSecondary" style={styles.apoio}>
+                    Precisamos do seu nome e telefone para que os outros responsáveis da sua
+                    família saibam com quem estão falando. A foto fica para depois.
+                  </ThemedText>
+                </View>
+              </Entrada>
 
-                <View style={styles.campoComAviso}>
-                  <TextField
+              <Entrada indice={2}>
+                <View style={styles.formulario}>
+                  <IconField
+                    label="Nome completo"
+                    icon="user"
+                    value={nomeCompleto}
+                    onChangeText={setNomeCompleto}
+                    placeholder="Como você quer ser chamado"
+                    autoCapitalize="words"
+                    autoComplete="name"
+                    textContentType="name"
+                    maxLength={80}
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoUsername.current?.focus()}
+                  />
+
+                  <IconField
+                    ref={campoUsername}
                     label="Nome de usuário"
+                    icon="at-sign"
                     value={username}
                     onChangeText={setUsername}
                     placeholder="joao.silva"
@@ -203,108 +265,98 @@ export default function SignupScreen() {
                     autoComplete="username"
                     textContentType="username"
                     maxLength={30}
+                    status={seloUsername}
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoTelefone.current?.focus()}
                   />
-                  <AvisoUsername status={statusUsername} />
+                  {statusUsername === 'invalido' && (
+                    <ThemedText type="small" themeColor="danger" style={styles.recuo}>
+                      Use de 3 a 30 caracteres: letras, números, ponto e underline.
+                    </ThemedText>
+                  )}
+
+                  <IconField
+                    ref={campoTelefone}
+                    label="Telefone"
+                    icon="phone"
+                    value={telefone}
+                    onChangeText={(texto) => setTelefone(formatarTelefone(texto))}
+                    placeholder="(81) 99999-8888"
+                    autoComplete="tel"
+                    keyboardType="phone-pad"
+                    inputMode="tel"
+                    textContentType="telephoneNumber"
+                    maxLength={16}
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoEmail.current?.focus()}
+                  />
+
+                  <IconField
+                    ref={campoEmail}
+                    label="E-mail"
+                    icon="mail"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="voce@exemplo.com"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    keyboardType="email-address"
+                    inputMode="email"
+                    textContentType="emailAddress"
+                    returnKeyType="next"
+                    onSubmitEditing={() => campoSenha.current?.focus()}
+                  />
+
+                  <IconField
+                    ref={campoSenha}
+                    label="Senha"
+                    icon="lock"
+                    value={senha}
+                    onChangeText={setSenha}
+                    placeholder={`Mínimo de ${MINIMO_SENHA} caracteres`}
+                    autoCapitalize="none"
+                    autoComplete="new-password"
+                    secureTextEntry
+                    textContentType="newPassword"
+                    onSubmitEditing={() => podeEnviar && cadastrar()}
+                    returnKeyType="go"
+                  />
+
+                  {erro && (
+                    <ThemedText type="small" themeColor="danger" style={styles.recuo}>
+                      {erro}
+                    </ThemedText>
+                  )}
+
+                  <View style={styles.acao}>
+                    <PrimaryButton
+                      label="Criar conta"
+                      onPress={cadastrar}
+                      loading={enviando}
+                      disabled={!podeEnviar}
+                    />
+                  </View>
                 </View>
+              </Entrada>
 
-                <TextField
-                  label="Telefone"
-                  value={telefone}
-                  onChangeText={(texto) => setTelefone(formatarTelefone(texto))}
-                  placeholder="(81) 99999-8888"
-                  autoComplete="tel"
-                  keyboardType="phone-pad"
-                  inputMode="tel"
-                  textContentType="telephoneNumber"
-                  maxLength={16}
-                />
-
-                <TextField
-                  label="E-mail"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="voce@exemplo.com"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  inputMode="email"
-                  textContentType="emailAddress"
-                />
-
-                <TextField
-                  label="Senha"
-                  value={senha}
-                  onChangeText={setSenha}
-                  placeholder={`Mínimo de ${MINIMO_SENHA} caracteres`}
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  secureTextEntry
-                  textContentType="newPassword"
-                  onSubmitEditing={() => podeEnviar && cadastrar()}
-                  returnKeyType="go"
-                />
-              </View>
-
-              {erro && (
-                <ThemedText type="small" themeColor="danger">
-                  {erro}
-                </ThemedText>
-              )}
-
-              <PrimaryButton
-                label="Criar conta"
-                onPress={cadastrar}
-                loading={enviando}
-                disabled={!podeEnviar}
-              />
-
-              <View style={styles.rodape}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Já tem conta?
-                </ThemedText>
-                <Link href="/login">
-                  <ThemedText type="linkPrimary">Entrar</ThemedText>
-                </Link>
-              </View>
+              <Entrada indice={3}>
+                <View style={styles.rodape}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Já tem conta?
+                  </ThemedText>
+                  <Link href="/login">
+                    <ThemedText type="small" themeColor="brand" style={styles.link}>
+                      Entrar
+                    </ThemedText>
+                  </Link>
+                </View>
+              </Entrada>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+          {indicadorRolagem}
+        </View>
       </SafeAreaView>
     </ThemedView>
-  );
-}
-
-function AvisoUsername({ status }: { status: StatusUsername }) {
-  if (status === 'vazio' || status === 'indisponivel') return null;
-
-  if (status === 'invalido') {
-    return (
-      <ThemedText type="small" themeColor="danger">
-        Use de 3 a 30 caracteres: letras, números, ponto e underline.
-      </ThemedText>
-    );
-  }
-
-  if (status === 'checando') {
-    return (
-      <ThemedText type="small" themeColor="textSecondary">
-        Verificando…
-      </ThemedText>
-    );
-  }
-
-  if (status === 'ocupado') {
-    return (
-      <ThemedText type="small" themeColor="danger">
-        Já está em uso. Escolha outro.
-      </ThemedText>
-    );
-  }
-
-  return (
-    <ThemedText type="small" themeColor="success">
-      Disponível.
-    </ThemedText>
   );
 }
 
@@ -315,30 +367,87 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  // Ritmo vertical: 24 entre blocos, 8 entre itens do mesmo grupo.
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: Spacing.four,
+  },
+  scrollCentro: {
+    justifyContent: 'center',
   },
   content: {
     width: '100%',
-    maxWidth: MaxContentWidth,
+    maxWidth: 460,
     alignSelf: 'center',
     gap: Spacing.four,
   },
-  cabecalho: {
-    gap: Spacing.one,
+  titulos: {
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.two,
+  },
+  apoio: {
+    fontSize: FontSize.body,
+    lineHeight: LineHeight.body,
+    fontWeight: 400,
   },
   formulario: {
-    gap: Spacing.three,
+    gap: Spacing.two,
   },
-  campoComAviso: {
-    gap: Spacing.one,
+  recuo: {
+    paddingHorizontal: Spacing.two,
+  },
+  // 8 do gap + 8 aqui = 16 entre o último campo e o botão.
+  acao: {
+    marginTop: Spacing.two,
   },
   rodape: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  link: {
+    fontWeight: 700,
+    paddingVertical: Spacing.three,
+  },
+  cartaoEmail: {
+    alignItems: 'center',
+    paddingVertical: Spacing.five,
+    gap: Spacing.four,
+  },
+  circulo: {
+    width: 96,
+    height: 96,
+    borderRadius: Radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  centro: {
+    textAlign: 'center',
+  },
+  negrito: {
+    fontSize: FontSize.body,
+    lineHeight: LineHeight.body,
+    fontWeight: 700,
+  },
+  dica: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radii.large,
+  },
+  dicaIcone: {
+    marginTop: Spacing.half,
+  },
+  dicaTexto: {
+    flex: 1,
+  },
+  voltar: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
     gap: Spacing.two,
   },
 });

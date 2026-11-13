@@ -2,9 +2,12 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { Card } from '@/components/card';
+import { FundoCartao, sombraCartao } from '@/components/card';
+import { PressableScale } from '@/components/pressable-scale';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { EscalaToque } from '@/constants/motion';
+import { Radii, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export type PersonRowProps = {
   nome: string;
@@ -15,54 +18,82 @@ export type PersonRowProps = {
   detalhe?: string;
   /** Botões ou selo encostados à direita. */
   direita?: ReactNode;
+  /**
+   * `true` quando `direita` é só texto/ícone (sem botão). A pílula tem 8 px de
+   * folga nas pontas, que combina com botões de 48 px; texto solto precisa de
+   * mais respiro.
+   */
+  direitaSolta?: boolean;
   onPress?: () => void;
 };
 
-/** Uma pessoa numa lista: avatar, nome, @username e uma área de ação à direita. */
+/**
+ * Uma pessoa numa lista: pílula de 64 px com avatar de 48 e folga de 8 px nos
+ * quatro lados, então avatar e botão ficam concêntricos com as pontas.
+ */
 export function PersonRow({
   nome,
   username,
   semente,
   detalhe,
   direita,
+  direitaSolta = false,
   onPress,
 }: PersonRowProps) {
-  return (
-    <Card onPress={onPress} style={styles.card}>
-      <View style={styles.linha}>
-        <Avatar nome={nome} semente={semente} />
+  const theme = useTheme();
 
-        <View style={styles.textos}>
-          <ThemedText type="smallBold" numberOfLines={1}>
-            {nome}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {detalhe ?? `@${username}`}
-          </ThemedText>
-        </View>
+  const linha = (
+    <View style={[styles.linha, sombraCartao(theme.shadow), { backgroundColor: theme.backgroundElement }]}>
+      <FundoCartao />
+      <Avatar nome={nome} semente={semente} tamanho={48} />
 
-        {direita && <View style={styles.direita}>{direita}</View>}
+      <View style={styles.textos}>
+        <ThemedText style={styles.nome} numberOfLines={1}>
+          {nome}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          {detalhe ?? `@${username}`}
+        </ThemedText>
       </View>
-    </Card>
+
+      {direita && (
+        <View style={[styles.direita, direitaSolta && styles.direitaSolta]}>{direita}</View>
+      )}
+    </View>
+  );
+
+  if (!onPress) return linha;
+
+  return (
+    <PressableScale accessibilityRole="button" onPress={onPress} escala={EscalaToque.cartao}>
+      {linha}
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    gap: 0,
-  },
   linha: {
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+    padding: Spacing.two,
+    borderRadius: Radii.pill,
+    overflow: 'hidden',
   },
   textos: {
     flex: 1,
-    gap: 1,
+    minWidth: 0,
+  },
+  nome: {
+    fontWeight: 700,
   },
   direita: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  direitaSolta: {
+    paddingRight: Spacing.three,
   },
 });

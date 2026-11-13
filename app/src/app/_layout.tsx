@@ -1,10 +1,23 @@
 import '../../global.css';
 
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ToastProvider } from '@/components/toast';
+import { Colors } from '@/constants/theme';
+import { Motion } from '@/constants/motion';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemePreferenceProvider, useThemePreference } from '@/lib/theme-preference';
 
@@ -19,7 +32,8 @@ function RootNavigator() {
   if (isLoading) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    // Entrar/sair do app: as duas áreas se sobrepõem com um fade curto.
+    <Stack screenOptions={{ headerShown: false, animation: 'fade', animationDuration: Motion.base }}>
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
@@ -34,8 +48,18 @@ function RootNavigator() {
 function RootContent() {
   const { mode } = useThemePreference();
 
+  // O fundo nativo da janela acompanha o tema do app (e não o do sistema):
+  // evita um clarão da cor errada em transições e ao abrir o teclado no Android.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(Colors[mode].background).catch(() => {});
+  }, [mode]);
+
   return (
     <ThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* Ícones da barra de status (hora, bateria) seguem o tema escolhido no
+          app: claros no escuro, escuros no claro — mesmo se o sistema estiver
+          no modo oposto. O conteúdo já respeita o recorte via SafeAreaView. */}
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <ToastProvider>
         <AuthProvider>
           <AnimatedSplashOverlay />
@@ -47,6 +71,17 @@ function RootContent() {
 }
 
 export default function RootLayout() {
+  const [fontesProntas, erroFontes] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  // Segura a splash até as fontes chegarem; se falharem, segue com a do sistema.
+  if (!fontesProntas && !erroFontes) return null;
+
   return (
     <ThemePreferenceProvider>
       <RootContent />

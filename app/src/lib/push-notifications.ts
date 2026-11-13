@@ -50,7 +50,7 @@ async function prepararCanalAndroid(notifications: NotificationsModule) {
     vibrationPattern: [0, 800, 250, 800, 250, 1200],
     enableVibrate: true,
     enableLights: true,
-    lightColor: Palette.denim500,
+    lightColor: Palette.sage500,
     lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
     showBadge: true,
   });

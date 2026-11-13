@@ -1,21 +1,28 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { QRCode } from '@ttsalpha/qrcode/native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { Icone } from '@/components/icone';
+import { ActionPill } from '@/components/action-pill';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
+import { JanelaAnimada } from '@/components/familia/janela-animada';
+import { IconButton } from '@/components/icon-button';
+import { IconField } from '@/components/icon-field';
+import { PressableScale } from '@/components/pressable-scale';
+import { QrFound, type QrExportavel } from '@/components/qr-found';
 import { LocationMap } from '@/components/location-map';
 import { PersonRow } from '@/components/person-row';
 import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
+import { Section } from '@/components/section';
 import { SecondaryButton } from '@/components/secondary-button';
+import { SegmentedTabs } from '@/components/segmented-tabs';
 import { ThemedText } from '@/components/themed-text';
-import { TextField } from '@/components/text-field';
 import { useToast } from '@/components/toast';
 import { Palette, Radii, Spacing } from '@/constants/theme';
+import { EscalaToque, Motion } from '@/constants/motion';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
@@ -23,6 +30,7 @@ import { finderUrl } from '@/lib/finder-url';
 import { openStreetMapUrl } from '@/lib/map-url';
 import { salvarImagemQr } from '@/lib/save-qr-image';
 import { supabase } from '@/lib/supabase';
+import { tempoRelativo } from '@/lib/tempo-relativo';
 
 type AbaFamilia = 'membros' | 'qrcodes';
 type Pessoa = { profile_id: string; username: string; full_name: string; papel?: string };
@@ -56,20 +64,31 @@ type PingLocalizacao = {
   received_at: string;
 };
 
-type QrCodeHandle = {
-  toDataURL: (callback: (base64: string) => void) => void;
-};
+type ParamsFamilia = { id?: string; aba?: AbaFamilia; nome?: string };
 
+/**
+ * A rota fica montada entre visitas (é uma aba oculta). Sem a `key`, ao abrir
+ * outra família o estado da anterior (nome, membros, QR Codes) aparecia até o
+ * carregamento terminar. Com ela, cada família monta a tela do zero.
+ */
 export default function ConfigurarFamiliaScreen() {
+  const params = useLocalSearchParams<ParamsFamilia>();
+  const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
+  return <ConfiguracaoDaFamilia key={groupId ?? 'nova'} />;
+}
+
+function ConfiguracaoDaFamilia() {
   const theme = useTheme();
   const { notificar } = useToast();
   const { width } = useWindowDimensions();
-  const params = useLocalSearchParams<{ id?: string; aba?: AbaFamilia }>();
+  const params = useLocalSearchParams<ParamsFamilia>();
   const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
+  // Nome vindo da lista (quando houver): o título já aparece certo antes de carregar.
+  const nomeInicial = (Array.isArray(params.nome) ? params.nome[0] : params.nome) ?? '';
   const { session } = useAuth();
   const [aba, setAba] = useState<AbaFamilia>(params.aba === 'qrcodes' ? 'qrcodes' : 'membros');
-  const [nome, setNome] = useState('');
-  const [nomeSalvo, setNomeSalvo] = useState('');
+  const [nome, setNome] = useState(nomeInicial);
+  const [nomeSalvo, setNomeSalvo] = useState(nomeInicial);
   const [papel, setPapel] = useState('chefe');
   const [membros, setMembros] = useState<Pessoa[]>([]);
   const [amigos, setAmigos] = useState<Pessoa[]>([]);
@@ -92,7 +111,11 @@ export default function ConfigurarFamiliaScreen() {
   const [qrConfigurando, setQrConfigurando] = useState<QrCadastrado | null>(null);
   const [nomeQrEditando, setNomeQrEditando] = useState('');
   const [salvandoEdicaoQr, setSalvandoEdicaoQr] = useState(false);
-  const [qrRenderizado, setQrRenderizado] = useState<QrCodeHandle | null>(null);
+  // Versão com moldura (nome + marca) para o download. Só é montada ao tocar em
+  // baixar: montá-la junto com a janela pesava a animação de abertura.
+  const aguardandoExportacao = useRef<((svg: QrExportavel) => void) | null>(null);
+  // Mostrar o link sobre o QR: transição suave em vez de troca seca.
+  const [linkProgresso] = useState(() => new Animated.Value(0));
   const [baixandoQr, setBaixandoQr] = useState(false);
   const [exibindoLinkQr, setExibindoLinkQr] = useState(false);
 
@@ -435,11 +458,21 @@ export default function ConfigurarFamiliaScreen() {
   }
 
   async function baixarImagemQr() {
-    if (!qrAberto || !qrRenderizado) return;
+    if (!qrAberto) return;
+    // Monta o adesivo (baixandoQr) e espera ele ficar pronto para exportar.
+    const svgPronto = new Promise<QrExportavel>((resolve) => {
+      aguardandoExportacao.current = resolve;
+    });
     setBaixandoQr(true);
 
     try {
-      const base64 = await new Promise<string>((resolve) => qrRenderizado.toDataURL(resolve));
+      const svg = await svgPronto;
+      // Um instante para o layout assentar (a web mede o elemento para exportar).
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      // 1080 px de largura: nítido para imprimir e colar.
+      const base64 = await new Promise<string>((resolve) =>
+        svg.toDataURL(resolve, { width: 1080, height: Math.round((1080 * 418) / 340) }),
+      );
       const nomeSeguro = qrAberto.dependent_name
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -459,7 +492,7 @@ export default function ConfigurarFamiliaScreen() {
 
       notificar({
         titulo: 'QR Code salvo',
-        mensagem: 'A imagem foi adicionada à sua galeria.',
+        mensagem: Platform.OS === 'web' ? 'A imagem foi baixada para o seu computador.' : 'A imagem foi adicionada à sua galeria.',
         tom: 'sucesso',
       });
     } catch {
@@ -469,67 +502,90 @@ export default function ConfigurarFamiliaScreen() {
         tom: 'erro',
       });
     } finally {
+      aguardandoExportacao.current = null;
       setBaixandoQr(false);
     }
   }
 
   function abrirQr(qr: QrCadastrado) {
     setExibindoLinkQr(false);
-    setQrRenderizado(null);
     setQrAberto(qr);
   }
 
   function fecharQr() {
     setQrAberto(null);
     setExibindoLinkQr(false);
-    setQrRenderizado(null);
   }
 
+  useEffect(() => {
+    Animated.timing(linkProgresso, {
+      toValue: exibindoLinkQr ? 1 : 0,
+      duration: Motion.base,
+      easing: Motion.suave,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [exibindoLinkQr, linkProgresso]);
+
   const podeEditar = !groupId || papel === 'chefe';
-  const tamanhoQr = Math.min(width - 128, 276);
+  const tamanhoQr = Math.min(width - 128, 296);
 
   function cancelarEdicaoNome() {
     setNome(nomeSalvo);
     setEditandoNome(false);
   }
 
+  const qrExibido = useUltimo(qrAberto);
+  const configExibido = useUltimo(qrConfigurando);
+
   return (
     <Screen
       titulo={groupId ? nomeSalvo || nome || 'Família' : 'Nova família'}
-      subtitulo={groupId ? 'Gerencie membros e QR Codes em um só lugar.' : 'Escolha um nome e convide seus amigos.'}
+      subtitulo={groupId ? 'Membros e QR Codes da família.' : 'Dê um nome e convide amigos.'}
+      aoVoltar={() => router.replace('/')}
+      rotuloVoltar="Voltar para o início"
       acao={
-        <View style={styles.acoesCabecalho}>
-          {groupId && podeEditar && (
-            <BotaoIcone
-              icone="pencil-outline"
-              label="Editar nome da família"
-              onPress={() => setEditandoNome(true)}
-            />
-          )}
-          <BotaoIcone icone="arrow-back" label="Voltar para o início" onPress={() => router.replace('/')} />
-        </View>
+        groupId && podeEditar ? (
+          <IconButton
+            icone="edit-2"
+            rotulo="Editar nome da família"
+            variante="claro"
+            onPress={() => setEditandoNome(true)}
+          />
+        ) : undefined
       }
       aoAtualizar={carregar}
       atualizando={carregando}>
       {(!groupId || editandoNome) && (
         <Card>
           <View style={styles.tituloCard}>
-            <Ionicons name={groupId ? 'pencil-outline' : 'home-outline'} size={22} color={theme.brand} />
-            <ThemedText type="smallBold">
+            <Icone nome={groupId ? 'edit-2' : 'home'} tamanho={22} cor={theme.brand} />
+            <ThemedText type="large" style={styles.negrito}>
               {groupId ? 'Editar nome da família' : 'Informações da família'}
             </ThemedText>
           </View>
-          <TextField label="Nome da família" placeholder="Ex.: Família Oliveira" value={nome} onChangeText={setNome} maxLength={60} />
-          <PrimaryButton label={groupId ? 'Salvar nome' : 'Criar família'} onPress={salvar} loading={salvando} />
+          <IconField
+            sobreCartao
+            icon="home"
+            label="Nome da família"
+            placeholder="Ex.: Família Oliveira"
+            value={nome}
+            onChangeText={setNome}
+            maxLength={60}
+          />
+          {groupId && <PrimaryButton label="Salvar nome" onPress={salvar} loading={salvando} />}
           {groupId && <SecondaryButton label="Cancelar" onPress={cancelarEdicaoNome} />}
         </Card>
       )}
 
       {groupId && (
-        <View style={[styles.abas, { backgroundColor: theme.backgroundSelected }]}>
-          <BotaoAba label={`Membros (${membros.length})`} icone="people-outline" ativa={aba === 'membros'} onPress={() => setAba('membros')} />
-          <BotaoAba label={`QR Codes (${qrs.length})`} icone="qr-code-outline" ativa={aba === 'qrcodes'} onPress={() => setAba('qrcodes')} />
-        </View>
+        <SegmentedTabs
+          opcoes={[
+            { chave: 'membros', rotulo: `Membros (${membros.length})`, icone: 'users' },
+            { chave: 'qrcodes', rotulo: `QR Codes (${qrs.length})`, icone: 'qr-code' },
+          ]}
+          valor={aba}
+          onChange={setAba}
+        />
       )}
 
       {(!groupId || aba === 'membros') && (
@@ -546,19 +602,21 @@ export default function ConfigurarFamiliaScreen() {
         />
       )}
 
-      {groupId && aba === 'qrcodes' && (
-        <View style={styles.secao}>
+      {!groupId && <PrimaryButton label="Criar família" onPress={salvar} loading={salvando} />}
+
+      {groupId && aba === 'qrcodes' && sessoes.length > 0 && (
+        <View style={styles.lista}>
           {sessoes.map((sessao) => {
             const ping = pings.find((item) => item.session_id === sessao.id);
             const qr = qrs.find((item) => item.id === sessao.qr_code_id);
             return (
               <Card key={sessao.id}>
                 <View style={styles.alertaCabecalho}>
-                  <View style={[styles.alertaIcone, { backgroundColor: theme.backgroundSelected }]}>
-                    <Ionicons name="location" size={24} color={theme.danger} />
+                  <View style={[styles.alertaIcone, { backgroundColor: theme.brandSoft }]}>
+                    <Icone nome="map-pin" tamanho={24} cor={theme.brand} />
                   </View>
-                  <View style={styles.qrTextos}>
-                    <ThemedText type="smallBold">Localização recebida</ThemedText>
+                  <View style={styles.textos}>
+                    <ThemedText style={styles.negrito}>Localização recebida</ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
                       QR Code: {qr?.dependent_name ?? 'QR cadastrado'}
                     </ThemedText>
@@ -566,22 +624,26 @@ export default function ConfigurarFamiliaScreen() {
                 </View>
                 {ping ? (
                   <>
-                    <LocationMap lat={ping.lat} lng={ping.lng} />
+                    {/* Um mapa só: onde está o QR (pin do Found) e, se você compartilhou,
+                        onde você está, ligados por uma linha tracejada. */}
+                    <LocationMap
+                      selo={`Atualizada ${tempoRelativo(ping.recorded_at)}`}
+                      pontos={[
+                        { lat: ping.lat, lng: ping.lng, tipo: 'encontrado', rotulo: qr?.dependent_name ?? 'QR Code' },
+                        ...(sessao.responsible_lat != null && sessao.responsible_lng != null
+                          ? [{ lat: sessao.responsible_lat, lng: sessao.responsible_lng, tipo: 'pessoa' as const, rotulo: 'Você' }]
+                          : []),
+                      ]}
+                    />
                     <ThemedText type="small" themeColor="textSecondary">
                       Atualizada em {new Date(ping.recorded_at).toLocaleString('pt-BR')}
                       {ping.accuracy_m ? ` · precisão aproximada de ${Math.round(ping.accuracy_m)} m` : ''}
                     </ThemedText>
-                    <View style={styles.acoesLocalizacao}>
-                      <SecondaryButton label="Compartilhar minha localização" tom="marca" onPress={() => void compartilharLocalizacao(sessao.id)} loading={compartilhandoLocalizacao === sessao.id} />
-                      <SecondaryButton label="Abrir mapa" tom="marca" onPress={() => void Linking.openURL(openStreetMapUrl(ping.lat, ping.lng))} />
+                    <View style={styles.lista}>
+                      <SecondaryButton compacto bloco label="Compartilhar minha localização" tom="marca" onPress={() => void compartilharLocalizacao(sessao.id)} loading={compartilhandoLocalizacao === sessao.id} />
+                      <SecondaryButton compacto bloco label="Abrir mapa" tom="marca" onPress={() => void Linking.openURL(openStreetMapUrl(ping.lat, ping.lng))} />
                       <PrimaryButton label="Já encontramos" onPress={() => void resolverSessao(sessao.id)} />
                     </View>
-                    {sessao.responsible_lat != null && sessao.responsible_lng != null && (
-                      <>
-                        <ThemedText type="smallBold">Sua localização compartilhada</ThemedText>
-                        <LocationMap lat={sessao.responsible_lat} lng={sessao.responsible_lng} />
-                      </>
-                    )}
                   </>
                 ) : (
                   <>
@@ -599,24 +661,22 @@ export default function ConfigurarFamiliaScreen() {
               </Card>
             );
           })}
+        </View>
+      )}
 
-          <View style={styles.secaoCabecalho}>
-            <ThemedText type="smallBold">QR Codes cadastrados</ThemedText>
-            <BotaoIcone
-              icone="add"
-              label="Cadastrar QR Code"
-              destaque
-              onPress={() => setMostrandoNovoQr(true)}
-            />
-          </View>
-
+      {groupId && aba === 'qrcodes' && (
+        <Section
+          titulo="QR Codes cadastrados"
+          acao={<IconButton icone="plus" rotulo="Cadastrar QR Code" onPress={() => setMostrandoNovoQr(true)} />}>
           {mostrandoNovoQr && (
             <Card>
               <View style={styles.tituloCard}>
-                <Ionicons name="qr-code-outline" size={22} color={theme.brand} />
-                <ThemedText type="smallBold">Novo QR Code</ThemedText>
+                <Icone nome="qr-code" tamanho={22} cor={theme.brand} />
+                <ThemedText type="large" style={styles.negrito}>Novo QR Code</ThemedText>
               </View>
-              <TextField
+              <IconField
+                sobreCartao
+                icon="qr-code"
                 label="Nome de identificação"
                 placeholder="Ex.: Lucas, Mochila da Ana, Rex"
                 value={nomeQr}
@@ -638,230 +698,183 @@ export default function ConfigurarFamiliaScreen() {
           )}
 
           {!carregando && qrs.length === 0 ? (
-            <EmptyState icone="qr-code-outline" titulo="Nenhum QR Code cadastrado" descricao="Cadastre o primeiro QR com o nome da pessoa, pet ou objeto que ele protegerá." />
+            <EmptyState icone="qr-code" titulo="Nenhum QR Code cadastrado" descricao="Cadastre o primeiro QR com o nome da pessoa, pet ou objeto que ele protegerá." />
           ) : (
             qrs.map((qr) => (
-              <Card
-                key={qr.id}
-                onPress={() => abrirQr(qr)}>
+              <Card key={qr.id} style={styles.cartaoLista}>
+                {/* A área do nome abre o QR e o lápis configura: botões irmãos, não um
+                    dentro do outro (botão aninhado é HTML inválido e confunde leitores de tela). */}
                 <View style={styles.qrLinha}>
-                  <View style={[styles.qrIcone, { backgroundColor: theme.backgroundSelected }]}>
-                    <Ionicons name="qr-code" size={26} color={theme.brand} />
+                  <PressableScale
+                    accessibilityRole="button"
+                    accessibilityLabel={`Abrir QR Code de ${qr.dependent_name}`}
+                    onPress={() => abrirQr(qr)}
+                    escala={EscalaToque.cartao}
+                    externo={styles.qrAbrir}
+                    style={styles.qrLinha}>
+                  <View style={[styles.qrIcone, { backgroundColor: theme.brandSoft }]}>
+                    <Icone nome="qr-code" tamanho={26} cor={theme.brand} />
                   </View>
-                  <View style={styles.qrTextos}>
-                    <ThemedText type="smallBold">{qr.dependent_name}</ThemedText>
+                  <View style={styles.textos}>
+                    <ThemedText style={styles.negrito} numberOfLines={1}>{qr.dependent_name}</ThemedText>
                     <ThemedText type="small" themeColor="textSecondary" selectable>
                       Código: {qr.short_code}
                     </ThemedText>
-                    <ThemedText type="small" themeColor={qr.is_active ? 'success' : 'danger'}>
-                      {qr.is_active ? 'Ativo' : 'Desativado'}
-                    </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
-                      Uso ilimitado
+                      <ThemedText type="small" style={[styles.negrito, { color: qr.is_active ? theme.success : theme.danger }]}>
+                        {qr.is_active ? 'Ativo' : 'Desativado'}
+                      </ThemedText>
+                      {' · Uso ilimitado'}
                     </ThemedText>
                   </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Configurar QR Code de ${qr.dependent_name}`}
+                  </PressableScale>
+                  <IconButton
+                    icone="edit-2"
+                    rotulo={`Configurar ${qr.dependent_name}`}
+                    variante="contorno"
                     onPress={() => abrirConfiguracaoQr(qr)}
-                    style={[
-                      styles.botaoConfigurarQr,
-                      { backgroundColor: theme.backgroundSelected },
-                    ]}>
-                    <Ionicons name="pencil-outline" size={20} color={theme.brand} />
-                  </Pressable>
+                  />
                 </View>
               </Card>
             ))
           )}
-        </View>
+        </Section>
       )}
 
-      <Modal
-        visible={!!qrAberto}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={fecharQr}>
-        <Pressable
-          accessible={false}
-          onPress={fecharQr}
-          style={[styles.modalFundo, { backgroundColor: theme.overlay }]}>
-          <Pressable
-            onPress={(evento) => evento.stopPropagation()}
-            style={[styles.modalConteudo, { backgroundColor: theme.backgroundElement }]}>
-            <View style={styles.modalCabecalho}>
-              <View style={styles.modalTitulo}>
-                <ThemedText type="subtitle" numberOfLines={1}>
-                  {qrAberto?.dependent_name}
-                </ThemedText>
-              </View>
-              <View style={styles.modalAcoes}>
-                <BotaoIcone
-                  icone="download-outline"
-                  label="Baixar imagem do QR Code"
-                  destaque
-                  loading={baixandoQr}
-                  onPress={() => void baixarImagemQr()}
-                />
-                <BotaoIcone icone="close" label="Fechar" onPress={fecharQr} />
-              </View>
-            </View>
-
-            <Pressable
-              accessibilityRole={exibindoLinkQr ? 'link' : 'button'}
-              accessibilityLabel={exibindoLinkQr ? 'Abrir página deste QR Code' : 'Mostrar link deste QR Code'}
-              onPress={() => {
-                if (!qrAberto) return;
-                if (exibindoLinkQr) {
-                  void Linking.openURL(finderUrl(qrAberto.token));
-                  return;
-                }
-                setExibindoLinkQr(true);
-              }}
-              style={[
-                styles.imagemFundo,
-                {
-                  backgroundColor: Palette.white,
-                  height: tamanhoQr + 40,
-                },
-              ]}>
-              <View style={exibindoLinkQr ? styles.qrDesmaiado : undefined} pointerEvents="none">
-                {qrAberto && (
-                  <QRCode
-                    ref={(referencia) => setQrRenderizado(referencia as QrCodeHandle | null)}
-                    value={finderUrl(qrAberto.token)}
-                    size={tamanhoQr}
-                    margin={4}
-                    dotStyle="circle"
-                    dotColor={Palette.denim700}
-                    backgroundColor={Palette.white}
-                    corner={{
-                      square: { style: 'extra-rounded', color: Palette.denim700 },
-                      dot: { style: 'circle', color: Palette.denim700 },
-                    }}
-                    logo={{
-                      src: require('@/assets/images/found-logo-v2.png'),
-                      size: 0.52,
-                      margin: 1,
-                      hideDots: true,
-                      radius: 0.18,
-                    }}
-                    ariaLabel={`QR Code de ${qrAberto.dependent_name}`}
-                  />
-                )}
-              </View>
-              {qrAberto && exibindoLinkQr && (
-                <View style={styles.linkSobreQr} pointerEvents="none">
-                  <Ionicons name="open-outline" size={24} color={theme.brand} />
-                  <ThemedText type="smallBold" style={[styles.textoCentralizado, { color: theme.brand }]}>
-                    Abrir link
-                  </ThemedText>
-                </View>
-              )}
-            </Pressable>
-
-            <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado}>
-              Toque no QR para abrir o link.
+      <JanelaAnimada visivel={!!qrAberto} onFechar={fecharQr}>
+        <View style={styles.modalCabecalho}>
+          <View style={styles.textos}>
+            <ThemedText type="subtitle" numberOfLines={1} style={styles.tituloQr}>
+              {qrExibido?.dependent_name}
             </ThemedText>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
-        visible={!!qrConfigurando}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setQrConfigurando(null)}>
-        <View style={[styles.modalFundo, { backgroundColor: theme.overlay }]}>
-          <View style={[styles.modalConteudo, { backgroundColor: theme.backgroundElement }]}>
-            <View style={styles.modalCabecalho}>
-              <View style={styles.modalTitulo}>
-                <ThemedText type="subtitle">Configurar QR Code</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Altere as opções deste QR Code.
-                </ThemedText>
-              </View>
-              <BotaoIcone icone="close" label="Fechar" onPress={() => setQrConfigurando(null)} />
-            </View>
-
-            <TextField
-              label="Nome de identificação"
-              value={nomeQrEditando}
-              onChangeText={setNomeQrEditando}
-              maxLength={60}
-              returnKeyType="done"
-              onSubmitEditing={() => void salvarEdicaoQr()}
-            />
-            <PrimaryButton label="Salvar alterações" onPress={() => void salvarEdicaoQr()} loading={salvandoEdicaoQr} />
-            {qrConfigurando && (
-              <SecondaryButton
-                label={qrConfigurando.is_active ? 'Desativar QR Code' : 'Ativar QR Code'}
-                tom={qrConfigurando.is_active ? 'perigo' : 'marca'}
-                loading={alterandoQr === qrConfigurando.id}
-                onPress={() => void alternarQr(qrConfigurando)}
-              />
-            )}
-            {qrConfigurando && papel === 'chefe' && (
-              <SecondaryButton
-                label="Excluir QR Code"
-                tom="perigo"
-                loading={excluindoQr === qrConfigurando.id}
-                onPress={() => confirmarExclusaoQr(qrConfigurando)}
-              />
-            )}
           </View>
+          <IconButton
+            icone="download"
+            rotulo="Baixar imagem do QR Code"
+            loading={baixandoQr}
+            onPress={() => void baixarImagemQr()}
+          />
+          <IconButton icone="x" rotulo="Fechar" variante="contorno" onPress={fecharQr} />
         </View>
-      </Modal>
+
+        <Pressable
+          accessibilityRole={exibindoLinkQr ? 'link' : 'button'}
+          accessibilityLabel={exibindoLinkQr ? 'Abrir página deste QR Code' : 'Mostrar link deste QR Code'}
+          onPress={() => {
+            if (!qrAberto) return;
+            if (exibindoLinkQr) {
+              void Linking.openURL(finderUrl(qrAberto.token));
+              return;
+            }
+            setExibindoLinkQr(true);
+          }}
+          style={[
+            styles.imagemFundo,
+            {
+              backgroundColor: Palette.white,
+              borderColor: theme.border,
+              height: tamanhoQr + 48,
+            },
+          ]}>
+          <Animated.View
+            style={{ opacity: linkProgresso.interpolate({ inputRange: [0, 1], outputRange: [1, 0.12] }) }}
+            pointerEvents="none">
+            {qrExibido && (
+              <QrFound
+                valor={finderUrl(qrExibido.token)}
+                tamanho={tamanhoQr}
+                accessibilityLabel={`QR Code de ${qrExibido.dependent_name}`}
+              />
+            )}
+          </Animated.View>
+          {qrAberto && (
+            <Animated.View
+              style={[
+                styles.linkSobreQr,
+                {
+                  opacity: linkProgresso,
+                  transform: [{ scale: linkProgresso.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+                },
+              ]}
+              pointerEvents="none"
+              aria-hidden={!exibindoLinkQr}>
+              <Icone nome="external-link" tamanho={24} cor={theme.brand} />
+              <ThemedText type="smallBold" style={[styles.textoCentralizado, { color: theme.brand }]}>
+                Abrir link
+              </ThemedText>
+            </Animated.View>
+          )}
+        </Pressable>
+
+        <ThemedText type="small" themeColor="textSecondary" style={styles.textoCentralizado}>
+          Toque no QR para abrir o link.
+        </ThemedText>
+
+        {/* Adesivo para o download: invisível e montado só durante a exportação.
+            A opacidade fica no contêiner, não no Svg, para não ir junto na imagem. */}
+        {qrExibido && baixandoQr && (
+          <View style={styles.qrExportacao} pointerEvents="none" aria-hidden>
+            <QrFound
+              valor={finderUrl(qrExibido.token)}
+              tamanho={340}
+              moldura={{ nome: qrExibido.dependent_name }}
+              svgRef={(svg) => {
+                if (svg && aguardandoExportacao.current) aguardandoExportacao.current(svg);
+              }}
+            />
+          </View>
+        )}
+      </JanelaAnimada>
+
+      <JanelaAnimada visivel={!!qrConfigurando} onFechar={() => setQrConfigurando(null)} fecharAoTocarFora={false}>
+        <View style={styles.modalCabecalho}>
+          <View style={styles.textos}>
+            <ThemedText type="large" style={styles.negrito}>Configurar QR Code</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Altere as opções deste QR Code.
+            </ThemedText>
+          </View>
+          <IconButton icone="x" rotulo="Fechar" variante="contorno" onPress={() => setQrConfigurando(null)} />
+        </View>
+
+        <IconField
+          sobreCartao
+          icon="qr-code"
+          label="Nome de identificação"
+          value={nomeQrEditando}
+          onChangeText={setNomeQrEditando}
+          maxLength={60}
+          returnKeyType="done"
+          onSubmitEditing={() => void salvarEdicaoQr()}
+        />
+        <PrimaryButton label="Salvar alterações" onPress={() => void salvarEdicaoQr()} loading={salvandoEdicaoQr} />
+        <View style={[styles.divisoria, { backgroundColor: theme.border }]} />
+        {configExibido && (
+          <SecondaryButton
+            label={configExibido.is_active ? 'Desativar QR Code' : 'Ativar QR Code'}
+            tom={configExibido.is_active ? 'neutro' : 'marca'}
+            loading={alterandoQr === configExibido.id}
+            onPress={() => void alternarQr(configExibido)}
+          />
+        )}
+        {configExibido && papel === 'chefe' && (
+          <SecondaryButton
+            label="Excluir QR Code"
+            tom="perigo"
+            loading={excluindoQr === configExibido.id}
+            onPress={() => confirmarExclusaoQr(configExibido)}
+          />
+        )}
+      </JanelaAnimada>
     </Screen>
   );
 }
 
-function BotaoIcone({ icone, label, destaque = false, loading = false, onPress }: {
-  icone: keyof typeof Ionicons.glyphMap;
-  label: string;
-  destaque?: boolean;
-  loading?: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: loading, busy: loading }}
-      disabled={loading}
-      onPress={onPress}
-      style={[
-        styles.botaoIcone,
-        {
-          backgroundColor: destaque ? theme.brand : theme.backgroundSelected,
-        },
-      ]}>
-      {loading ? (
-        <ActivityIndicator size="small" color={destaque ? theme.onBrand : theme.brand} />
-      ) : (
-        <Ionicons name={icone} size={21} color={destaque ? theme.onBrand : theme.brand} />
-      )}
-    </Pressable>
-  );
-}
-
-function BotaoAba({ label, icone, ativa, onPress }: { label: string; icone: keyof typeof Ionicons.glyphMap; ativa: boolean; onPress: () => void }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected: ativa }}
-      onPress={onPress}
-      style={[styles.botaoAba, ativa && { backgroundColor: theme.brand }]}>
-      <Ionicons name={icone} size={18} color={ativa ? theme.onBrand : theme.textSecondary} />
-      <ThemedText type="smallBold" style={{ color: ativa ? theme.onBrand : theme.textSecondary }}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
+/** Guarda o último valor não nulo, para a janela não esvaziar durante a animação de saída. */
+function useUltimo<T>(valor: T | null): T | null {
+  const [ultimo, setUltimo] = useState<T | null>(valor);
+  if (valor && valor !== ultimo) setUltimo(valor);
+  return valor ?? ultimo;
 }
 
 function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carregando, convidando, onConvidar, onAlternarSelecionado }: {
@@ -878,19 +891,17 @@ function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carreg
   return (
     <>
       {groupId && (
-        <View style={styles.secao}>
-          <ThemedText type="smallBold">Membros da família</ThemedText>
+        <Section titulo="Membros da família">
           {membros.map((pessoa) => (
             <PersonRow key={pessoa.profile_id} nome={pessoa.full_name} username={pessoa.username} semente={pessoa.profile_id} detalhe={pessoa.papel === 'chefe' ? 'Chefe da família' : `@${pessoa.username}`} />
           ))}
-        </View>
+        </Section>
       )}
 
       {podeEditar && (
-        <View style={styles.secao}>
-          <ThemedText type="smallBold">Adicionar membros</ThemedText>
+        <Section titulo="Adicionar membros">
           {!carregando && amigos.length === 0 ? (
-            <EmptyState icone="people-outline" titulo="Nenhum amigo disponível" descricao="Adicione amigos na Comunidade. Depois, eles aparecerão aqui para receber um convite." />
+            <EmptyState icone="users" titulo="Nenhum amigo disponível" descricao="Adicione amigos na Comunidade. Depois, eles aparecerão aqui para receber um convite." />
           ) : (
             amigos.map((pessoa) => {
               const selecionado = selecionados.includes(pessoa.profile_id);
@@ -901,24 +912,31 @@ function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carreg
                   username={pessoa.username}
                   semente={pessoa.profile_id}
                   direita={
-                    <SecondaryButton
-                      label={groupId ? 'Convidar' : selecionado ? 'Selecionado' : 'Adicionar'}
-                      tom="marca"
-                      compacto
-                      loading={convidando === pessoa.profile_id}
-                      onPress={() => groupId ? onConvidar(pessoa) : onAlternarSelecionado(pessoa.profile_id)}
-                    />
+                    groupId ? (
+                      <ActionPill
+                        label="Convidar"
+                        loading={convidando === pessoa.profile_id}
+                        onPress={() => onConvidar(pessoa)}
+                      />
+                    ) : (
+                      <ActionPill
+                        label={selecionado ? 'Selecionado' : 'Adicionar'}
+                        variante={selecionado ? 'suave' : 'escuro'}
+                        icone={selecionado ? 'check' : undefined}
+                        onPress={() => onAlternarSelecionado(pessoa.profile_id)}
+                      />
+                    )
                   }
                 />
               );
             })
           )}
           {!groupId && amigos.length > 0 && (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="small" themeColor="textSecondary" style={styles.nota}>
               Os amigos selecionados receberão um convite depois que a família for criada.
             </ThemedText>
           )}
-        </View>
+        </Section>
       )}
     </>
   );
@@ -926,48 +944,31 @@ function AbaMembros({ groupId, membros, amigos, selecionados, podeEditar, carreg
 
 const styles = StyleSheet.create({
   tituloCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  secao: { gap: Spacing.two },
-  secaoCabecalho: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
-  acoesCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  botaoIcone: { width: 42, height: 42, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
-  abas: { flexDirection: 'row', padding: Spacing.one, borderRadius: Radii.large, gap: Spacing.one },
-  botaoAba: { flex: 1, minHeight: 44, borderRadius: Radii.medium, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two, paddingHorizontal: Spacing.two },
+  negrito: { fontWeight: 700 },
+  lista: { gap: Spacing.two },
+  nota: { paddingHorizontal: Spacing.two },
+  cartaoLista: { padding: Spacing.three },
+  textos: { flex: 1, minWidth: 0 },
   qrLinha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  qrIcone: { width: 52, height: 52, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
-  qrTextos: { flex: 1, gap: Spacing.half },
-  botaoConfigurarQr: { width: 44, height: 44, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
+  qrAbrir: { flex: 1, minWidth: 0 },
+  qrIcone: { width: 56, height: 56, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
   alertaCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  alertaIcone: { width: 48, height: 48, borderRadius: Radii.medium, alignItems: 'center', justifyContent: 'center' },
-  acoesLocalizacao: { gap: Spacing.two },
-  modalFundo: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.four,
-  },
-  modalConteudo: {
-    width: '100%',
-    maxWidth: 440,
-    borderRadius: Radii.extraLarge,
-    padding: Spacing.four,
-    gap: Spacing.four,
-  },
-  modalCabecalho: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  modalTitulo: { flex: 1, gap: Spacing.half },
-  modalAcoes: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  alertaIcone: { width: 48, height: 48, borderRadius: Radii.pill, alignItems: 'center', justifyContent: 'center' },
+  modalCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  divisoria: { height: 1 },
   imagemFundo: {
     width: '100%',
     borderRadius: Radii.large,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.three,
     overflow: 'hidden',
   },
-  qrDesmaiado: { opacity: 0.12 },
+  // Uma linha só corta o que passa da caixa: a folga embaixo (compensada pela
+  // margem) deixa a perna do "g", "j", "p" inteira sem mover o layout.
+  tituloQr: { paddingBottom: Spacing.one, marginBottom: -Spacing.one },
+  qrExportacao: { position: 'absolute', top: 0, left: 0, opacity: 0 },
   linkSobreQr: {
     position: 'absolute',
     top: 0,

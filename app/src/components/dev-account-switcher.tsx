@@ -1,9 +1,10 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icone } from '@/components/icone';
 import { Avatar } from '@/components/avatar';
+import { FundoCartao, sombraCartao } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radii, Spacing } from '@/constants/theme';
@@ -15,6 +16,7 @@ import {
   subscribeSavedAccounts,
   upsertSavedAccount,
 } from '@/lib/saved-accounts';
+import { soltarFocoDevolvido } from '@/lib/foco-web';
 import { supabase } from '@/lib/supabase';
 
 export type DevAccountSwitcherProps = {
@@ -39,6 +41,31 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [semeando, setSemeando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // 0 = fechada, 1 = aberta. O fundo usa como opacidade e a folha como deslocamento.
+  const [progresso] = useState(() => new Animated.Value(0));
+  const [alturaFolha, setAlturaFolha] = useState(600);
+
+  function abrir() {
+    setAberto(true);
+    Animated.timing(progresso, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }
+
+  function fechar() {
+    Animated.timing(progresso, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(() => {
+      setAberto(false);
+      soltarFocoDevolvido();
+    });
+  }
 
   useEffect(() => {
     let vivo = true;
@@ -72,7 +99,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
 
   async function trocar(a: SavedAccount) {
     if (ehAtiva(a)) {
-      setAberto(false);
+      fechar();
       return;
     }
     setOcupado(a.userId);
@@ -86,7 +113,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
       setErro(`${a.username ?? a.email}: a sessão expirou. Remova e entre de novo.`);
       return;
     }
-    setAberto(false);
+    fechar();
     aposTrocar?.();
   }
 
@@ -94,7 +121,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
     setErro(null);
     // Logout só local: não revoga o token no servidor, então dá para voltar.
     await supabase.auth.signOut({ scope: 'local' });
-    setAberto(false);
+    fechar();
   }
 
   async function semearTeste() {
@@ -145,16 +172,19 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
     <>
       <Pressable
         accessibilityRole="button"
-        onPress={() => setAberto(true)}
-        style={[styles.trigger, { borderColor: theme.border }]}>
+        onPress={abrir}
+        style={[styles.trigger, sombraCartao(theme.shadow), { backgroundColor: theme.backgroundElement }]}>
+        <FundoCartao />
         {contaAtual ? (
           <Avatar
             nome={nomeConta(contaAtual)}
             semente={contaAtual.userId}
-            tamanho={32}
+            tamanho={40}
           />
         ) : (
-          <Ionicons name="people-circle-outline" size={22} color={theme.textSecondary} />
+          <View style={[styles.triggerIcone, { backgroundColor: theme.background }]}>
+            <Icone nome="users" tamanho={18} cor={theme.text} />
+          </View>
         )}
         <View style={styles.triggerTextos}>
           <ThemedText type="smallBold">
@@ -166,16 +196,37 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
             </ThemedText>
           )}
         </View>
-        <Ionicons name="swap-horizontal" size={20} color={theme.textSecondary} />
+        <Icone nome="chevron-right" tamanho={18} cor={theme.textSecondary} estilo={styles.triggerSeta} />
       </Pressable>
 
-      <Modal visible={aberto} transparent animationType="slide" onRequestClose={() => setAberto(false)}>
-        <Pressable style={[styles.backdrop, { backgroundColor: theme.overlay }]} onPress={() => setAberto(false)}>
-          <Pressable onPress={() => {}}>
+      <Modal visible={aberto} transparent animationType="none" statusBarTranslucent onRequestClose={fechar}>
+        <View style={styles.backdrop}>
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay, opacity: progresso }]}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={fechar}
+              accessibilityRole="button"
+              accessibilityLabel="Fechar"
+            />
+          </Animated.View>
+          <Animated.View
+            onLayout={(e) => setAlturaFolha(e.nativeEvent.layout.height)}
+            style={{
+              transform: [
+                {
+                  translateY: progresso.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [alturaFolha, 0],
+                  }),
+                },
+              ],
+            }}>
             <ThemedView
               type="backgroundElement"
-              style={[styles.folha, { paddingBottom: Math.max(insets.bottom, Spacing.four) }]}>
-              <View style={styles.puxador} />
+              style={[styles.folha, sombraCartao(theme.shadow), { paddingBottom: Math.max(insets.bottom, Spacing.four) }]}>
+              <FundoCartao />
+              <View style={[styles.puxador, { backgroundColor: theme.border }]} />
               <View style={styles.titulos}>
                 <ThemedText type="subtitle">Trocar de conta</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
@@ -199,12 +250,9 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                       onPress={() => trocar(a)}
                       style={[
                         styles.item,
-                        {
-                          borderColor: ativa ? theme.brand : theme.border,
-                          backgroundColor: ativa ? theme.backgroundSelected : 'transparent',
-                        },
+                        { backgroundColor: ativa ? theme.brandSoft : theme.backgroundSelected },
                       ]}>
-                      <Avatar nome={nomeConta(a)} semente={a.userId} tamanho={42} />
+                      <Avatar nome={nomeConta(a)} semente={a.userId} tamanho={48} />
                       <View style={styles.itemTextos}>
                         <ThemedText type="smallBold">{nomeConta(a)}</ThemedText>
                         <ThemedText type="small" themeColor="textSecondary">
@@ -214,9 +262,9 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                       {ocupado === a.userId ? (
                         <ActivityIndicator color={theme.brand} />
                       ) : ativa ? (
-                        <Ionicons name="checkmark-circle" size={22} color={theme.brand} />
+                        <Icone nome="check-circle" tamanho={22} cor={theme.brand} />
                       ) : (
-                        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                        <Icone nome="chevron-right" tamanho={18} cor={theme.textSecondary} />
                       )}
                     </Pressable>
                   );
@@ -234,7 +282,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                 disabled={ocupado !== null || semeando}
                 onPress={adicionar}
                 style={styles.acao}>
-                <Ionicons name="add-circle-outline" size={20} color={theme.brand} />
+                <Icone nome="plus-circle" tamanho={20} cor={theme.brand} />
                 <ThemedText type="smallBold" style={{ color: theme.brand }}>
                   Adicionar outra conta
                 </ThemedText>
@@ -249,7 +297,7 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                   {semeando ? (
                     <ActivityIndicator color={theme.textSecondary} />
                   ) : (
-                    <Ionicons name="flash-outline" size={20} color={theme.textSecondary} />
+                    <Icone nome="zap" tamanho={20} cor={theme.textSecondary} />
                   )}
                   <ThemedText type="smallBold" themeColor="textSecondary">
                     {semeando ? 'Entrando nas contas de teste…' : `Salvar ${naoSalvas.length} contas de teste`}
@@ -257,8 +305,8 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
                 </Pressable>
               )}
             </ThemedView>
-          </Pressable>
-        </Pressable>
+          </Animated.View>
+        </View>
       </Modal>
     </>
   );
@@ -266,13 +314,24 @@ export function DevAccountSwitcher({ currentEmail, label = 'Trocar de conta', ap
 
 const styles = StyleSheet.create({
   trigger: {
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    borderWidth: 1,
-    borderRadius: Radii.large,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radii.pill,
+    overflow: 'hidden',
+  },
+  triggerIcone: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  triggerSeta: {
+    marginRight: Spacing.two,
   },
   triggerTextos: {
     flex: 1,
@@ -286,6 +345,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopLeftRadius: Radii.extraLarge,
     borderTopRightRadius: Radii.extraLarge,
+    overflow: 'hidden',
     padding: Spacing.four,
     gap: Spacing.three,
   },
@@ -294,7 +354,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: Radii.pill,
-    backgroundColor: 'rgba(127,127,127,0.4)',
   },
   titulos: {
     gap: Spacing.one,
@@ -305,13 +364,13 @@ const styles = StyleSheet.create({
   },
   item: {
     width: '100%',
-    minHeight: 68,
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
-    borderWidth: 1,
-    borderRadius: Radii.large,
+    padding: Spacing.two,
+    paddingRight: Spacing.three,
+    borderRadius: Radii.pill,
   },
   itemTextos: {
     flex: 1,

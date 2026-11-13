@@ -3,44 +3,51 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Found — contrato denim + neutros quentes (variáveis HSL).
+   Found — paleta Sálvia: neutros esverdeados, ações em grafite e degradê
+   verde-água (#3FA584) → verde (#6CC160) para localização e confirmações.
    Mantenha estes tokens iguais aos do site (finder-site/src/styles.css) e
    espelhados em src/constants/theme.ts. Claro e escuro seguem o tema do
    sistema automaticamente (darkMode: 'media').
    --------------------------------------------------------------------------- */
 @layer base {
   :root {
-    --background: 36 24% 96%;
-    --foreground: 227 11% 16%;
+    --background: 90 7% 95%;
+    --foreground: 144 8% 13%;
 
-    --card: 40 100% 99%;
-    --card-foreground: 227 11% 16%;
+    --card: 0 0% 100%;
+    --card-gradient: 147 33% 94%;
+    --field-gradient-from: 96 14% 93%;
+    --field-gradient-to: 212 30% 92%;
+    --toggle-track: 108 7% 87%;
+    --warning: 26 86% 38%;
+    --warning-soft: 29 81% 94%;
+    --card-foreground: 144 8% 13%;
 
-    --primary: 223 30% 36%;
+    --primary: 144 8% 13%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 12% 90%;
-    --secondary-foreground: 225 21% 26%;
+    --secondary: 154 40% 92%;
+    --secondary-foreground: 160 60% 30%;
 
-    --muted: 40 17% 93%;
-    --muted-foreground: 223 6% 45%;
+    --muted: 90 8% 90%;
+    --muted-foreground: 143 4% 40%;
 
-    --accent: 26 33% 91%;
-    --accent-foreground: 18 35% 31%;
+    --accent: 154 40% 92%;
+    --accent-foreground: 160 60% 30%;
 
     --destructive: 358 70% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 154 46% 34%;
+    --success: 160 60% 30%;
     --success-foreground: 0 0% 100%;
 
-    --border: 43 10% 86%;
-    --input: 43 10% 86%;
-    --ring: 224 34% 57%;
+    --border: 105 8% 91%;
+    --input: 105 8% 91%;
+    --ring: 161 45% 45%;
 
-    --radius: 1rem;
+    --radius: 1.375rem;
 
-    --font-display: 'Spline Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'PlusJakartaSans_400Regular', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
     --font-serif: Georgia, 'Times New Roman', serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -48,33 +55,72 @@
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: 223 16% 13%;
-      --foreground: 43 24% 95%;
+      --background: 150 10% 8%;
+      --foreground: 90 7% 95%;
 
-      --card: 222 15% 17%;
-      --card-foreground: 43 24% 95%;
+      --card: 144 8% 12%;
+      --card-gradient: 154 17% 16%;
+      --field-gradient-from: 146 9% 15%;
+      --field-gradient-to: 215 22% 15%;
+      --toggle-track: 147 7% 25%;
+      --warning: 31 87% 72%;
+      --warning-soft: 33 42% 16%;
+      --card-foreground: 90 7% 95%;
 
-      --primary: 225 78% 82%;
-      --primary-foreground: 224 31% 12%;
+      --primary: 90 7% 95%;
+      --primary-foreground: 150 10% 8%;
 
-      --secondary: 223 15% 22%;
-      --secondary-foreground: 228 12% 92%;
+      --secondary: 155 33% 17%;
+      --secondary-foreground: 152 57% 72%;
 
-      --muted: 224 15% 19%;
-      --muted-foreground: 224 8% 74%;
+      --muted: 140 8% 16%;
+      --muted-foreground: 143 5% 65%;
 
-      --accent: 15 13% 22%;
-      --accent-foreground: 22 64% 87%;
+      --accent: 155 33% 17%;
+      --accent-foreground: 152 57% 72%;
 
       --destructive: 358 62% 60%;
       --destructive-foreground: 0 0% 100%;
 
-      --success: 150 47% 55%;
-      --success-foreground: 223 16% 13%;
+      --success: 152 57% 72%;
+      --success-foreground: 150 10% 8%;
 
-      --border: 223 13% 27%;
-      --input: 223 13% 27%;
-      --ring: 225 78% 82%;
+      --border: 140 7% 18%;
+      --input: 140 7% 18%;
+      --ring: 157 47% 57%;
     }
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Barra de rolagem (só na web). A nativa ocupa largura e descentraliza o
+   layout, então fica escondida; as telas desenham um indicador próprio que
+   flutua sobre o conteúdo e some quando parado (ver indicador-rolagem.tsx).
+   --------------------------------------------------------------------------- */
+* {
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Foco pelo teclado (só na web): anel verde arredondado, com folga, no lugar do
+   retângulo preto padrão. 28 px acompanha os cartões e vira pílula nos botões
+   (o navegador limita o raio à metade da altura). Com mouse/toque não aparece.
+   --------------------------------------------------------------------------- */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+[role='button']:focus-visible,
+[role='link']:focus-visible,
+[role='tab']:focus-visible,
+[role='switch']:focus-visible {
+  outline: 2px solid hsl(var(--ring) / 0.7);
+  outline-offset: 3px;
+  border-radius: 28px;
 }

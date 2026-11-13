@@ -3,73 +3,131 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   To Aqui — contrato de cores Emerald (estilo shadcn, variáveis HSL).
-   Mantenha estes tokens iguais aos do app (app/src/constants/theme.ts).
-   Claro e escuro seguem o tema do sistema automaticamente.
+   Found — paleta Sálvia. Tokens idênticos aos do app (app/global.css) e
+   espelhados em app/src/constants/theme.ts. Claro e escuro seguem o tema do
+   sistema automaticamente.
    --------------------------------------------------------------------------- */
 @layer base {
   :root {
-    --background: 138 76% 97%;
-    --foreground: 158 42% 11%;
+    --background: 90 7% 95%;
+    --foreground: 144 8% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 158 42% 11%;
+    --card-gradient: 147 33% 94%;
+    --field-gradient-from: 96 14% 93%;
+    --field-gradient-to: 212 30% 92%;
+    --toggle-track: 108 7% 87%;
+    --warning: 26 86% 38%;
+    --warning-soft: 29 81% 94%;
+    --card-foreground: 144 8% 13%;
 
-    --primary: 163 94% 24%;
+    --primary: 144 8% 13%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 149 72% 92%;
-    --secondary-foreground: 163 88% 20%;
+    --secondary: 154 40% 92%;
+    --secondary-foreground: 160 60% 30%;
 
-    --muted: 152 60% 95%;
-    --muted-foreground: 155 16% 40%;
+    --muted: 90 8% 90%;
+    --muted-foreground: 143 4% 40%;
 
-    --accent: 149 72% 92%;
-    --accent-foreground: 163 88% 20%;
+    --accent: 154 40% 92%;
+    --accent-foreground: 160 60% 30%;
 
     --destructive: 358 70% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 163 94% 24%;
+    --success: 160 60% 30%;
     --success-foreground: 0 0% 100%;
 
-    --border: 150 24% 88%;
-    --input: 150 24% 88%;
-    --ring: 160 84% 39%;
+    --border: 105 8% 91%;
+    --input: 105 8% 91%;
+    --ring: 161 45% 45%;
 
-    --radius: 1rem;
+    --radius: 1.375rem;
+
+    /* Sombra leve dos cartões (mesma do app: theme.shadow). */
+    --shadow: 144 8% 13% / 0.08;
+
   }
 
+  /* Escuro: pelo sistema (se a pessoa não escolheu "claro") ou pela escolha
+     "escuro" no botão do topo (classe no <html>). Os dois blocos são iguais. */
   @media (prefers-color-scheme: dark) {
     :root:not(.light) {
-      --background: 158 46% 8%;
-      --foreground: 150 40% 96%;
+      --background: 150 10% 8%;
+      --foreground: 90 7% 95%;
 
-      --card: 157 40% 12%;
-      --card-foreground: 150 40% 96%;
+      --card: 144 8% 12%;
+      --card-gradient: 154 17% 16%;
+      --field-gradient-from: 146 9% 15%;
+      --field-gradient-to: 215 22% 15%;
+      --toggle-track: 147 7% 25%;
+      --warning: 31 87% 72%;
+      --warning-soft: 33 42% 16%;
+      --card-foreground: 90 7% 95%;
 
-      --primary: 158 64% 52%;
-      --primary-foreground: 160 84% 9%;
+      --primary: 90 7% 95%;
+      --primary-foreground: 150 10% 8%;
 
-      --secondary: 157 34% 18%;
-      --secondary-foreground: 150 50% 92%;
+      --secondary: 155 33% 17%;
+      --secondary-foreground: 152 57% 72%;
 
-      --muted: 157 30% 16%;
-      --muted-foreground: 150 16% 66%;
+      --muted: 140 8% 16%;
+      --muted-foreground: 143 5% 65%;
 
-      --accent: 157 34% 20%;
-      --accent-foreground: 150 50% 92%;
+      --accent: 155 33% 17%;
+      --accent-foreground: 152 57% 72%;
 
       --destructive: 358 62% 60%;
       --destructive-foreground: 0 0% 100%;
 
-      --success: 158 64% 52%;
-      --success-foreground: 160 84% 9%;
+      --success: 152 57% 72%;
+      --success-foreground: 150 10% 8%;
 
-      --border: 150 26% 20%;
-      --input: 150 26% 20%;
-      --ring: 158 64% 52%;
+      --border: 140 7% 18%;
+      --input: 140 7% 18%;
+      --ring: 157 47% 57%;
+
+      --shadow: 0 0% 0% / 0.32;
     }
+  }
+
+  :root.dark {
+    --background: 150 10% 8%;
+    --foreground: 90 7% 95%;
+
+    --card: 144 8% 12%;
+    --card-gradient: 154 17% 16%;
+    --field-gradient-from: 146 9% 15%;
+    --field-gradient-to: 215 22% 15%;
+    --toggle-track: 147 7% 25%;
+    --warning: 31 87% 72%;
+    --warning-soft: 33 42% 16%;
+    --card-foreground: 90 7% 95%;
+
+    --primary: 90 7% 95%;
+    --primary-foreground: 150 10% 8%;
+
+    --secondary: 155 33% 17%;
+    --secondary-foreground: 152 57% 72%;
+
+    --muted: 140 8% 16%;
+    --muted-foreground: 143 5% 65%;
+
+    --accent: 155 33% 17%;
+    --accent-foreground: 152 57% 72%;
+
+    --destructive: 358 62% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 57% 72%;
+    --success-foreground: 150 10% 8%;
+
+    --border: 140 7% 18%;
+    --input: 140 7% 18%;
+    --ring: 157 47% 57%;
+
+    --shadow: 0 0% 0% / 0.32;
   }
 
   * {
@@ -77,7 +135,7 @@
   }
 
   html {
-    font-family: 'Spline Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -86,13 +144,123 @@
     @apply bg-background text-foreground;
     margin: 0;
     min-height: 100vh;
+    /* Brilho verde bem sutil atrás do topo: preenche a tela larga sem enfeitar. */
+    background-image: radial-gradient(60rem 28rem at 50% -8rem, hsl(var(--secondary)) 0%, transparent 70%);
+    background-repeat: no-repeat;
   }
 }
 
-/* O mapa Leaflet vive fora do fluxo de componentes; mantemos só o essencial. */
+@layer base {
+  /* Troca de tema suave (botão do topo): cores mudam em 300 ms, não num estalo.
+     Só cores; nada de layout. "Reduzir movimento" desliga (regra no fim). */
+  body,
+  .superficie-cartao,
+  .bg-card,
+  .bg-secondary,
+  .bg-primary,
+  .bg-background {
+    transition:
+      background-color 300ms ease,
+      color 300ms ease,
+      border-color 300ms ease;
+  }
+}
+
+@layer components {
+  /* Cartão no padrão do app: degradê diagonal quase imperceptível + sombra leve. */
+  .superficie-cartao {
+    background-image: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card-gradient)) 100%);
+    box-shadow:
+      0 1px 2px hsl(var(--shadow)),
+      0 10px 28px -8px hsl(var(--shadow));
+  }
+
+  /* As ondas do radar crescem a partir do próprio centro. */
+  .animate-onda {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Mapa no padrão do Found (mesmo visual do app: app/src/lib/mapa-found.ts).
+   O mapa colorido do OpenStreetMap vira tons neutros com leve tom sálvia; no
+   escuro, invertido. Pins, etiquetas e controles seguem os cartões.
+   --------------------------------------------------------------------------- */
 .leaflet-container {
   height: 100%;
   width: 100%;
   font: inherit;
-  border-radius: calc(var(--radius) - 4px);
+  font-size: 14px;
+  border-radius: 28px;
+  background: hsl(var(--background));
+}
+.mapa-found {
+  --filtro-mapa: grayscale(1) sepia(0.18) hue-rotate(80deg) saturate(1.3) brightness(1.04) contrast(0.92);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .mapa-found {
+    --filtro-mapa: grayscale(1) invert(1) sepia(0.25) hue-rotate(95deg) saturate(1.3) brightness(0.82) contrast(0.88);
+  }
+}
+:root.dark .mapa-found {
+  --filtro-mapa: grayscale(1) invert(1) sepia(0.25) hue-rotate(95deg) saturate(1.3) brightness(0.82) contrast(0.88);
+}
+.mapa-found .leaflet-tile-pane { filter: var(--filtro-mapa); }
+
+/* Pin do Found com ondas de localização. */
+.found-alvo { position: relative; width: 44px; height: 44px; }
+.found-alvo svg {
+  position: relative; z-index: 1; display: block; border-radius: 13px;
+  box-shadow: 0 0 0 3px hsl(var(--card)), 0 6px 14px rgb(0 0 0 / 0.28);
+}
+.found-onda {
+  position: absolute; inset: -14px; border-radius: 50%;
+  border: 2px solid #3FA584; background: rgb(63 165 132 / 0.13);
+  animation: found-onda 2.8s ease-out infinite;
+}
+.found-onda.d2 { animation-delay: 1.4s; }
+@keyframes found-onda { from { transform: scale(0.55); opacity: 0.9; } to { transform: scale(1.6); opacity: 0; } }
+
+/* Marcador da família: no tom do botão principal, com anel na cor do cartão. */
+.found-pessoa {
+  width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; box-sizing: border-box;
+  background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+  border: 3px solid hsl(var(--card)); box-shadow: 0 6px 14px rgb(0 0 0 / 0.25);
+}
+
+/* Etiquetas em pílula. */
+.leaflet-tooltip.found-tip {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 18px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.16);
+}
+.leaflet-tooltip-top.found-tip::before { border-top-color: hsl(var(--card)); }
+
+/* Controles discretos, em pílula. */
+.mapa-found .leaflet-bar { border: 0; border-radius: 999px; overflow: hidden; box-shadow: 0 4px 14px rgb(0 0 0 / 0.16); }
+.mapa-found .leaflet-bar a {
+  width: 36px; height: 36px; line-height: 36px; border: 0;
+  background: hsl(var(--card)); color: hsl(var(--card-foreground)); font-weight: 600;
+}
+.mapa-found .leaflet-control-zoom { margin: 12px 12px 0 0; }
+.mapa-found .leaflet-top.leaflet-left { left: auto; right: 0; }
+.mapa-found .leaflet-control-attribution {
+  margin: 0 8px 8px 0; border-radius: 999px; padding: 1px 8px;
+  background: hsl(var(--card) / 0.78); color: hsl(var(--muted-foreground)); font-size: 9px;
+}
+.mapa-found .leaflet-control-attribution a { color: inherit; }
+
+/* Movimento sutil: tudo desligado com prefers-reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
