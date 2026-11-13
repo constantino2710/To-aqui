@@ -1,5 +1,5 @@
-import { useId, type ReactNode } from 'react';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { useId, useState, type ReactNode } from 'react';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { PressableScale } from '@/components/pressable-scale';
@@ -33,17 +33,30 @@ export function sombraDestaque(cor: string): ViewStyle {
 export function FundoCartao({ de, para }: { de?: string; para?: string } = {}) {
   const theme = useTheme();
   const gradId = `cartao-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  // Tamanho medido em px: no Android, o Svg com "100%" às vezes é dimensionado
+  // pela caixa errada e o degradê não cobre o cartão inteiro.
+  const [tamanho, setTamanho] = useState<{ w: number; h: number } | null>(null);
 
   return (
-    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" pointerEvents="none">
-      <Defs>
-        <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={de ?? theme.backgroundElement} />
-          <Stop offset="1" stopColor={para ?? theme.cardGradientTo} />
-        </LinearGradient>
-      </Defs>
-      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
-    </Svg>
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setTamanho((t) => (t && t.w === width && t.h === height ? t : { w: width, h: height }));
+      }}>
+      {tamanho && (
+        <Svg width={tamanho.w} height={tamanho.h}>
+          <Defs>
+            <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={de ?? theme.backgroundElement} />
+              <Stop offset="1" stopColor={para ?? theme.cardGradientTo} />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={tamanho.w} height={tamanho.h} fill={`url(#${gradId})`} />
+        </Svg>
+      )}
+    </View>
   );
 }
 

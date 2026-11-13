@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Stop } from 'react-native-svg';
 
@@ -34,49 +34,55 @@ const MARCA_CENTRO_Y = CENTRO.y - 29;
 export function LocationHero({ selo = 'Localização consentida', marca = false }: LocationHeroProps) {
   const theme = useTheme();
   const gradId = `hero-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  // Largura medida em px: no Android, o Svg com "100%" pode ser dimensionado
+  // pela caixa errada. A altura segue a proporção do desenho.
+  const [largura, setLargura] = useState(0);
 
   return (
     <View
       style={[styles.card, sombraCartao(theme.shadow), { backgroundColor: theme.backgroundElement }]}
-      aria-hidden={!marca}>
-      <Svg
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
-        style={StyleSheet.absoluteFill}
-        aria-hidden>
-        <Defs>
-          <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={theme.gradientFrom} />
-            <Stop offset="1" stopColor={theme.gradientTo} />
-          </LinearGradient>
-        </Defs>
-        <G stroke={theme.background} strokeLinecap="round" fill="none">
-          <Path d="M-10 64 L360 40" strokeWidth={12} />
-          <Path d="M-10 212 L360 232" strokeWidth={12} />
-          <Path d="M80 -10 L110 270" strokeWidth={10} />
-          <Path d="M260 -10 L240 270" strokeWidth={10} />
-          <Path d="M-10 130 L360 124" strokeWidth={4} />
-          <Path d="M30 -10 L50 270" strokeWidth={4} />
-          <Path d="M180 -10 L190 270" strokeWidth={4} />
-        </G>
-        <Circle
-          cx={CENTRO.x}
-          cy={CENTRO.y}
-          r={96}
-          fill={theme.gradientFrom}
-          fillOpacity={0.08}
-          stroke={theme.gradientFrom}
-          strokeOpacity={0.5}
-          strokeWidth={1.5}
-        />
-        <Circle cx={CENTRO.x} cy={CENTRO.y} r={54} fill={theme.gradientFrom} fillOpacity={0.12} />
-        {marca ? (
-          <Ellipse cx={CENTRO.x} cy={CENTRO.y + 28} rx={18} ry={5} fill={theme.text} fillOpacity={0.12} />
-        ) : (
-          <Circle cx={CENTRO.x} cy={CENTRO.y} r={16} fill={`url(#${gradId})`} stroke={theme.backgroundElement} strokeWidth={4} />
-        )}
-      </Svg>
+      aria-hidden={!marca}
+      onLayout={(e) => setLargura(e.nativeEvent.layout.width)}>
+      {largura > 0 && (
+        <Svg
+          width={largura}
+          height={(largura * VB_H) / VB_W}
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          style={StyleSheet.absoluteFill}
+          aria-hidden>
+          <Defs>
+            <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={theme.gradientFrom} />
+              <Stop offset="1" stopColor={theme.gradientTo} />
+            </LinearGradient>
+          </Defs>
+          <G stroke={theme.background} strokeLinecap="round" fill="none">
+            <Path d="M-10 64 L360 40" strokeWidth={12} />
+            <Path d="M-10 212 L360 232" strokeWidth={12} />
+            <Path d="M80 -10 L110 270" strokeWidth={10} />
+            <Path d="M260 -10 L240 270" strokeWidth={10} />
+            <Path d="M-10 130 L360 124" strokeWidth={4} />
+            <Path d="M30 -10 L50 270" strokeWidth={4} />
+            <Path d="M180 -10 L190 270" strokeWidth={4} />
+          </G>
+          <Circle
+            cx={CENTRO.x}
+            cy={CENTRO.y}
+            r={96}
+            fill={theme.gradientFrom}
+            fillOpacity={0.08}
+            stroke={theme.gradientFrom}
+            strokeOpacity={0.5}
+            strokeWidth={1.5}
+          />
+          <Circle cx={CENTRO.x} cy={CENTRO.y} r={54} fill={theme.gradientFrom} fillOpacity={0.12} />
+          {marca ? (
+            <Ellipse cx={CENTRO.x} cy={CENTRO.y + 28} rx={18} ry={5} fill={theme.text} fillOpacity={0.12} />
+          ) : (
+            <Circle cx={CENTRO.x} cy={CENTRO.y} r={16} fill={`url(#${gradId})`} stroke={theme.backgroundElement} strokeWidth={4} />
+          )}
+        </Svg>
+      )}
 
       {marca && (
         <>
