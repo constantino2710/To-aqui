@@ -94,3 +94,27 @@ export async function registrarPushDoAparelho(userId: string) {
     // Token/credenciais são opcionais durante desenvolvimento; não bloquear o app.
   }
 }
+
+/**
+ * Tira este aparelho da lista de avisos da pessoa (usado ao sair da conta):
+ * sem isso, o celular continuaria recebendo alertas das famílias dela. Precisa
+ * rodar antes do logout, enquanto a sessão ainda permite apagar a linha. Não
+ * pede permissão nem bloqueia: sem push disponível, não há o que remover.
+ */
+export async function removerPushDoAparelho(userId: string) {
+  const notifications = carregarNotifications();
+  if (!notifications) return;
+
+  try {
+    const { status } = await notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    if (!projectId) return;
+
+    const token = (await notifications.getExpoPushTokenAsync({ projectId })).data;
+    await supabase.from('devices').delete().eq('user_id', userId).eq('push_token', token);
+  } catch {
+    // Falhar aqui não pode impedir a pessoa de sair.
+  }
+}

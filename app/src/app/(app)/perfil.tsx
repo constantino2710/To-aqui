@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
@@ -9,11 +9,13 @@ import { AlturaAnimada } from '@/components/altura-animada';
 import { AneisMarca } from '@/components/aneis-marca';
 import { Badge } from '@/components/badge';
 import { Card, FundoCartao } from '@/components/card';
-import { DevAccountSwitcher } from '@/components/dev-account-switcher';
+import { JanelaAnimada } from '@/components/familia/janela-animada';
 import { Entrada } from '@/components/entrada';
 import { IconButton } from '@/components/icon-button';
 import { IconField } from '@/components/icon-field';
+import { Icone } from '@/components/icone';
 import { PrimaryButton } from '@/components/primary-button';
+import { SecondaryButton } from '@/components/secondary-button';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
@@ -22,6 +24,7 @@ import { FontSize, JakartaFamilies, Palette, Radii, Spacing } from '@/constants/
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
+import { removerPushDoAparelho } from '@/lib/push-notifications';
 import { supabase } from '@/lib/supabase';
 import { useThemePreference } from '@/lib/theme-preference';
 
@@ -52,10 +55,30 @@ export default function PerfilScreen() {
   const [editando, setEditando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [saindo, setSaindo] = useState(false);
   const [resumo, setResumo] = useState<{ familias: number; amigos: number } | null>(null);
   // "Próximo" no teclado leva de um campo ao outro.
   const campoUsername = useRef<TextInput>(null);
   const campoTelefone = useRef<TextInput>(null);
+
+  async function sair() {
+    setSaindo(true);
+    const userId = session?.user.id;
+    // Tira o aparelho dos avisos antes de sair (depois a sessão já não deixa).
+    // No máximo 4 s: sem rede, a pessoa não pode ficar presa aqui.
+    if (userId) {
+      await Promise.race([removerPushDoAparelho(userId), new Promise((resolve) => setTimeout(resolve, 4000))]);
+    }
+    // "local": encerra só a sessão deste aparelho; os outros continuam logados.
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      setSaindo(false);
+      notificar({ titulo: 'Não foi possível sair', mensagem: 'Verifique sua conexão e tente de novo.', tom: 'erro' });
+      return;
+    }
+    // Sem sessão, o layout raiz troca para a tela de entrada sozinho.
+  }
 
   const carregar = useCallback(async () => {
     if (!session) return;
@@ -252,7 +275,39 @@ export default function PerfilScreen() {
         </>
       )}
 
-      <DevAccountSwitcher currentEmail={session?.user.email} aposTrocar={() => router.replace('/')} />
+      {perfil && (
+        // Cartão e confirmação juntos: a janela não ocupa um espaço próprio na lista.
+        <View>
+          <Card onPress={() => setConfirmandoSaida(true)}>
+            <View style={styles.temaLinha}>
+              <View style={styles.temaTextos}>
+                <ThemedText type="smallBold">Sair da conta</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Encerra a sessão neste aparelho.
+                </ThemedText>
+              </View>
+              <View style={[styles.sairIcone, { backgroundColor: theme.backgroundSelected }]}>
+                <Icone nome="log-out" tamanho={20} cor={theme.text} />
+              </View>
+            </View>
+          </Card>
+
+          <JanelaAnimada visivel={confirmandoSaida} onFechar={() => !saindo && setConfirmandoSaida(false)}>
+            <View style={styles.saidaTextos}>
+              <ThemedText type="large" style={styles.nome}>
+                Sair da conta?
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Você deixa de receber os avisos das suas famílias neste aparelho até entrar de novo.
+              </ThemedText>
+            </View>
+            <View style={styles.saidaAcoes}>
+              <PrimaryButton label="Sair" onPress={() => void sair()} loading={saindo} />
+              <SecondaryButton label="Voltar" onPress={() => setConfirmandoSaida(false)} disabled={saindo} />
+            </View>
+          </JanelaAnimada>
+        </View>
+      )}
     </Screen>
   );
 }
@@ -294,4 +349,7 @@ const styles = StyleSheet.create({
   valor: { fontWeight: 600 },
   temaLinha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   temaTextos: { flex: 1, gap: Spacing.one },
+  sairIcone: { width: 44, height: 44, borderRadius: Radii.pill, alignItems: 'center', justifyContent: 'center' },
+  saidaTextos: { gap: Spacing.one },
+  saidaAcoes: { gap: Spacing.two, marginTop: Spacing.two },
 });

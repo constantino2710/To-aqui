@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import {
@@ -10,44 +11,11 @@ import {
 } from 'react';
 
 import { traduzErroAuth } from '@/lib/auth-errors';
-import { getSavedAccounts, upsertSavedAccount } from '@/lib/saved-accounts';
 import { supabase } from '@/lib/supabase';
 
-/**
- * Guarda a conta ativa na lista de contas salvas (troca rápida) e mantém seus
- * tokens atualizados a cada renovação. Busca o username uma vez, enquanto a
- * própria conta está ativa (a RLS só deixa ler o próprio perfil).
- */
-async function sincronizarContaSalva(sessao: Session | null) {
-  if (!sessao?.user?.id) return;
-  try {
-    await upsertSavedAccount({
-      userId: sessao.user.id,
-      email: sessao.user.email ?? '',
-      accessToken: sessao.access_token,
-      refreshToken: sessao.refresh_token,
-    });
-
-    const salvas = await getSavedAccounts();
-    const atual = salvas.find((a) => a.userId === sessao.user.id);
-    if (atual && (!atual.username || !atual.fullName)) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('username, full_name')
-        .eq('id', sessao.user.id)
-        .single();
-      if (data?.username || data?.full_name) {
-        await upsertSavedAccount({
-          ...atual,
-          username: data.username ?? atual.username,
-          fullName: data.full_name ?? atual.fullName,
-        });
-      }
-    }
-  } catch {
-    // Falha ao salvar a conta não pode quebrar o fluxo de login.
-  }
-}
+// Versões de teste guardavam os tokens de cada conta usada no aparelho (troca
+// rápida de conta). O recurso saiu; apagamos o que tiver ficado salvo.
+const CHAVE_CONTAS_ANTIGAS = 'to-aqui.saved-accounts';
 
 /**
  * Para onde o link do e-mail de confirmação deve voltar.
@@ -87,13 +55,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setIsLoading(false);
-      void sincronizarContaSalva(data.session);
     });
+    void AsyncStorage.removeItem(CHAVE_CONTAS_ANTIGAS).catch(() => {});
 
     // Toda mudança posterior: login, logout, refresh de token, troca de usuário.
     const { data } = supabase.auth.onAuthStateChange((_evento, novaSessao) => {
       setSession(novaSessao);
-      void sincronizarContaSalva(novaSessao);
     });
 
     return () => data.subscription.unsubscribe();
