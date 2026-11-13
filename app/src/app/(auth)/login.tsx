@@ -3,7 +3,6 @@ import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DevAccountSwitcher } from '@/components/dev-account-switcher';
 import { IconField } from '@/components/icon-field';
 import { useIndicadorRolagem } from '@/components/indicador-rolagem';
 import { LocationHero } from '@/components/location-hero';
@@ -124,10 +123,6 @@ export default function LoginScreen() {
                 </Link>
               </View>
             </View>
-
-            <View style={[styles.content, styles.dev]}>
-              <DevAccountSwitcher label="Trocar de conta (teste)" />
-            </View>
           </ScrollView>
           {indicador}
         </View>
@@ -185,9 +180,5 @@ const styles = StyleSheet.create({
   },
   link: {
     fontWeight: 700,
-  },
-  dev: {
-    marginTop: 'auto',
-    paddingTop: Spacing.four,
   },
 });
