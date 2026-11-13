@@ -53,14 +53,14 @@ export function Toggle({ value, onValueChange, accessibilityLabel, disabled = fa
       hitSlop={8}
       style={[styles.trilho, { backgroundColor: theme.toggleTrack, opacity: disabled ? 0.5 : 1 }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: progresso }]} pointerEvents="none">
-        <Svg width="100%" height="100%">
+        <Svg width={LARGURA} height={ALTURA}>
           <Defs>
             <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
               <Stop offset="0" stopColor={theme.gradientFrom} />
               <Stop offset="1" stopColor={theme.gradientTo} />
             </LinearGradient>
           </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradId})`} />
+          <Rect x="0" y="0" width={LARGURA} height={ALTURA} fill={`url(#${gradId})`} />
         </Svg>
       </Animated.View>
       <Animated.View
