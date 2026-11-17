@@ -55,8 +55,10 @@
       [
         "expo-notifications",
         {
+          "icon": "./assets/images/notification-icon.png",
           "color": "#3FA584",
-          "defaultChannel": "location-found"
+          "defaultChannel": "found-alarme",
+          "sounds": ["./assets/sounds/alarme_found.wav"]
         }
       ],
       "expo-font",

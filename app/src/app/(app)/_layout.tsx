@@ -43,6 +43,7 @@ export default function AppLayout() {
       <Tabs.Screen name="perfil" options={{ title: 'Perfil' }} />
       <Tabs.Screen name="configurar-familia" options={{ href: null }} />
       <Tabs.Screen name="qr-code" options={{ href: null }} />
+      <Tabs.Screen name="encontrado" options={{ href: null }} />
     </Tabs>
     </EspacoBarraContext.Provider>
   );

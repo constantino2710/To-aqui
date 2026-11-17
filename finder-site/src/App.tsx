@@ -12,6 +12,11 @@ import { supabase } from './supabase';
 
 type Estado = 'introducao' | 'iniciando' | 'ativo' | 'parando' | 'encerrado' | 'erro';
 type ScanResult = { session_id: string; finder_token: string };
+type NotificationResult = { sent?: boolean; reason?: string };
+
+/** O aviso já saiu (agora ou antes): não precisa tentar de novo. */
+const avisoResolvido = (r?: NotificationResult | null) =>
+  Boolean(r?.sent || r?.reason === 'already-sent' || r?.reason === 'recently-sent');
 type MapResult = {
   status: Estado;
   finder_lat: number | null;
@@ -32,6 +37,8 @@ export function App() {
   const [mapa, setMapa] = useState<MapResult | null>(null);
   const watcherRef = useRef<number | null>(null);
   const finderTokenRef = useRef<string | null>(null);
+  const notificacaoEnviadaRef = useRef(false);
+  const proximaTentativaNotificacaoRef = useRef(0);
   const token = new URLSearchParams(window.location.search).get('token');
 
   function limparObservador() {
@@ -68,6 +75,19 @@ export function App() {
       p_recorded_at: new Date(position.timestamp).toISOString(),
     });
     if (error) setMensagem('Não foi possível enviar a posição. Verifique sua conexão.');
+    if (
+      // Reforço do aviso do escaneamento (a função ignora se já foi enviado).
+      !error &&
+      data === 'active' &&
+      !notificacaoEnviadaRef.current &&
+      Date.now() >= proximaTentativaNotificacaoRef.current
+    ) {
+      proximaTentativaNotificacaoRef.current = Date.now() + 30_000;
+      const push = await supabase.functions.invoke<NotificationResult>('notify-location-found', {
+        body: { finder_token: finderTokenRef.current },
+      });
+      if (!push.error && avisoResolvido(push.data)) notificacaoEnviadaRef.current = true;
+    }
     if (data === 'ended') {
       limparObservador();
       setEstado('encerrado');
@@ -97,6 +117,16 @@ export function App() {
       return;
     }
     finderTokenRef.current = scan.finder_token;
+    notificacaoEnviadaRef.current = false;
+    proximaTentativaNotificacaoRef.current = 0;
+    // A família é avisada já no escaneamento ("[nome] foi encontrado!"), sem
+    // esperar o GPS. Sem `await`: o pedido de permissão não fica parado nisso.
+    // Se falhar, o primeiro ping (em `enviarPosicao`) tenta de novo.
+    void supabase.functions
+      .invoke<NotificationResult>('notify-location-found', { body: { finder_token: scan.finder_token } })
+      .then((push) => {
+        if (!push.error && avisoResolvido(push.data)) notificacaoEnviadaRef.current = true;
+      });
     const consent = await supabase.rpc('grant_tracking_consent', { p_finder_token: scan.finder_token });
     if (consent.error || consent.data === 'ended') {
       setEstado(consent.data === 'ended' ? 'encerrado' : 'erro');
