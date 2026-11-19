@@ -1,9 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icone, type NomeIcone } from '@/components/icone';
 import { PressableScale } from '@/components/pressable-scale';
-import { Radii, Spacing } from '@/constants/theme';
+import { ThemedText } from '@/components/themed-text';
+import { FontSize, LineHeight, Palette, Radii, Spacing } from '@/constants/theme';
 import { useEspacoBarra } from '@/hooks/use-espaco-barra';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -15,6 +16,8 @@ export type FabProps = {
   icone?: NomeIcone;
   /** Quando a tela NÃO está dentro das abas, soma a área segura de baixo. */
   semBarraDeAbas?: boolean;
+  /** Selo com um número no canto (ex.: mensagens não lidas). 0 esconde. */
+  contador?: number;
 };
 
 /**
@@ -22,7 +25,7 @@ export type FabProps = {
  * Dentro das abas, a barra inferior flutua sobre a tela, então o botão sobe
  * a altura dela (ver `useEspacoBarra`) mais 16 px de folga.
  */
-export function Fab({ onPress, accessibilityLabel, icone = 'plus', semBarraDeAbas = false }: FabProps) {
+export function Fab({ onPress, accessibilityLabel, icone = 'plus', semBarraDeAbas = false, contador = 0 }: FabProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const espacoBarra = useEspacoBarra();
@@ -38,6 +41,15 @@ export function Fab({ onPress, accessibilityLabel, icone = 'plus', semBarraDeAba
       externo={[styles.posicao, { right: Spacing.four, bottom }]}
       style={[styles.fab, { backgroundColor: theme.action, boxShadow: `0 10px 24px ${theme.shadowStrong}` }]}>
       <Icone nome={icone} tamanho={30} cor={theme.onAction} />
+      {contador > 0 && (
+        <View
+          style={[styles.contador, { backgroundColor: theme.gradientFrom, borderColor: theme.background }]}
+          pointerEvents="none">
+          <ThemedText style={[styles.contadorTexto, { color: Palette.white }]}>
+            {contador > 9 ? '9+' : contador}
+          </ThemedText>
+        </View>
+      )}
     </PressableScale>
   );
 }
@@ -54,5 +66,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
+  },
+  // Verde da marca = boa notícia (mensagem nova), nunca o vermelho de erro.
+  contador: {
+    position: 'absolute',
+    top: -Spacing.one,
+    right: -Spacing.one,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: Spacing.one,
+    borderRadius: Radii.pill,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contadorTexto: {
+    fontSize: FontSize.small,
+    lineHeight: LineHeight.small,
+    fontWeight: 700,
   },
 });

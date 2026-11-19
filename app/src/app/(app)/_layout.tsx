@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Animated, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BannerMensagem } from '@/components/banner-mensagem';
 import { Icone } from '@/components/icone';
 import { ThemedText } from '@/components/themed-text';
 import { Motion } from '@/constants/motion';
@@ -45,6 +46,8 @@ export default function AppLayout() {
       <Tabs.Screen name="qr-code" options={{ href: null }} />
       <Tabs.Screen name="encontrado" options={{ href: null }} />
     </Tabs>
+    {/* Mensagem nova de quem encontrou, em qualquer tela (ver BannerMensagem). */}
+    <BannerMensagem />
     </EspacoBarraContext.Provider>
   );
 }

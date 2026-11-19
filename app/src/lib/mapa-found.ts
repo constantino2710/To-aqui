@@ -49,7 +49,7 @@ const FILTRO_ESCURO = 'grayscale(1) invert(1) sepia(0.25) hue-rotate(95deg) satu
 const PIN = 'M24 8c-7.2 0-13 5.6-13 12.6C11 30 24 40 24 40s13-10 13-19.4C37 13.6 31.2 8 24 8z';
 
 // Símbolo do Found em SVG, para o marcador de quem achou o QR.
-const MARCA_SVG = `<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${Palette.sage500}"/><stop offset="1" stop-color="${Palette.sage400}"/></linearGradient></defs><rect width="48" height="48" rx="14" fill="${Palette.graphite}"/><path d="${PIN}" fill="url(#g)"/><rect x="18.5" y="14.5" width="11" height="11" rx="3" fill="${Palette.graphite}"/><rect x="21.5" y="17.5" width="5" height="5" rx="1.4" fill="#FFFFFF"/></svg>`;
+const MARCA_SVG = `<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${Palette.sage500}"/><stop offset="1" stop-color="${Palette.sage400}"/></linearGradient></defs><path class="found-pin" d="${PIN}" fill="url(#g)"/><rect x="18.5" y="14.5" width="11" height="11" rx="3" fill="${Palette.graphite}"/><rect x="21.5" y="17.5" width="5" height="5" rx="1.4" fill="#FFFFFF"/></svg>`;
 
 // Ícone de pessoa (traço, no estilo Feather) para o marcador "você".
 const PESSOA_SVG = (cor: string) =>
@@ -85,11 +85,11 @@ export function mapaFoundHtml({ pontos, modo, selo, zoom = false }: OpcoesMapa):
   .leaflet-container { font-family: inherit; background: ${c.background}; }
   .leaflet-tile-pane { filter: ${filtro}; }
 
-  /* Pin do Found com ondas de localização. */
+  /* Pin do Found (sem o quadrado da logo) com ondas de localização na ponta. */
   .found-alvo { position: relative; width: 44px; height: 44px; }
-  .found-alvo svg { position: relative; z-index: 1; display: block; border-radius: 13px;
-    box-shadow: 0 0 0 3px ${c.backgroundElement}, 0 6px 14px rgba(0,0,0,.28); }
-  .found-onda { position: absolute; inset: -14px; border-radius: 50%; border: 2px solid ${Palette.sage500}; background: ${Palette.sage500}22; animation: onda 2.8s ease-out infinite; }
+  .found-alvo svg { position: relative; z-index: 1; display: block; filter: drop-shadow(0 4px 6px rgba(0,0,0,.28)); }
+  .found-alvo .found-pin { stroke: ${c.backgroundElement}; stroke-width: 3; paint-order: stroke; stroke-linejoin: round; }
+  .found-onda { position: absolute; left: -14px; top: 1px; width: 72px; height: 72px; border-radius: 50%; border: 2px solid ${Palette.sage500}; background: ${Palette.sage500}22; animation: onda 2.8s ease-out infinite; }
   .found-onda.d2 { animation-delay: 1.4s; }
   @keyframes onda { from { transform: scale(.55); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
 
@@ -151,7 +151,8 @@ export function mapaFoundHtml({ pontos, modo, selo, zoom = false }: OpcoesMapa):
   camada.addTo(mapa);
 
   const icones = {
-    encontrado: L.divIcon({ className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+    // A ponta do pin é o local exato: ancora nela (y 40 de 48).
+    encontrado: L.divIcon({ className: '', iconSize: [44, 44], iconAnchor: [22, 37],
       html: '<div class="found-alvo"><span class="found-onda"></span><span class="found-onda d2"></span>${MARCA_SVG.replace(/'/g, "\\'")}</div>' }),
     pessoa: L.divIcon({ className: '', iconSize: [36, 36], iconAnchor: [18, 18],
       html: '<div class="found-pessoa">${PESSOA_SVG(pessoaIcone).replace(/'/g, "\\'")}</div>' }),
@@ -160,7 +161,7 @@ export function mapaFoundHtml({ pontos, modo, selo, zoom = false }: OpcoesMapa):
   pontos.forEach((p) => {
     L.marker([p.lat, p.lng], { icon: icones[p.tipo], keyboard: false })
       .addTo(mapa)
-      .bindTooltip(p.rotulo, { permanent: true, direction: 'top', offset: [0, p.tipo === 'encontrado' ? -26 : -20], className: 'found-etiqueta' });
+      .bindTooltip(p.rotulo, { permanent: true, direction: 'top', offset: [0, p.tipo === 'encontrado' ? -32 : -20], className: 'found-etiqueta' });
   });
 
   if (pontos.length > 1) {

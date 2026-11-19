@@ -13,7 +13,23 @@ import { supabase } from '@/lib/supabase';
 export const FOUND_ALARM_CHANNEL = 'found-alarme';
 /** Arquivo em `assets/sounds/`, registrado no plugin `expo-notifications` do app.json. */
 export const FOUND_ALARM_SOUND = 'alarme_found.wav';
-const CANAIS_ANTIGOS = ['location-found'];
+// `found-chat` escondia o texto na tela bloqueada; a visibilidade de um canal
+// não muda depois de criado, então as mensagens ganharam um canal novo.
+const CANAIS_ANTIGOS = ['location-found', 'found-chat'];
+/** Canal das mensagens do chat: som padrão, sem a sirene do alarme. */
+export const CHAT_CHANNEL = 'found-mensagens';
+
+/**
+ * Sessão cuja conversa está aberta na tela agora. Com o app em primeiro plano,
+ * o push de mensagem dessa sessão não aparece: ela já está chegando no chat.
+ */
+let chatAberto: string | null = null;
+export function marcarChatAberto(sessaoId: string | null) {
+  chatAberto = sessaoId;
+}
+export function chatAbertoAgora() {
+  return chatAberto;
+}
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -34,9 +50,12 @@ const Notifications = carregarNotifications();
 Notifications?.setNotificationHandler({
   handleNotification: async (notificacao) => {
     const emPrimeiroPlano = AppState.currentState === 'active';
+    const dados = notificacao.request.content.data as { tipo?: unknown; sessionId?: unknown } | undefined;
     // "Foi encontrado" é urgente: toca e aparece mesmo com o app aberto, porque
     // nesse momento ainda não há localização para o toast do Realtime mostrar.
-    const urgente = (notificacao.request.content.data as { tipo?: unknown } | undefined)?.tipo === 'encontrado';
+    const urgente = dados?.tipo === 'encontrado';
+    // Mensagem do chat com o app aberto vira o banner do próprio app
+    // (`BannerMensagem`), no padrão visual do Found; o do sistema só com o app fechado.
     const mostrar = urgente || !emPrimeiroPlano;
     return {
       shouldPlaySound: mostrar,
@@ -70,6 +89,19 @@ async function prepararCanalAndroid(notifications: NotificationsModule) {
     enableVibrate: true,
     enableLights: true,
     lightColor: Palette.sage500,
+    lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
+    showBadge: true,
+  });
+
+  await notifications.setNotificationChannelAsync(CHAT_CHANNEL, {
+    name: 'Mensagens de quem encontrou',
+    description: 'Mensagens enviadas no chat por quem escaneou um QR Code da sua família.',
+    importance: notifications.AndroidImportance.HIGH,
+    sound: 'default',
+    vibrationPattern: [0, 250, 150, 250],
+    enableVibrate: true,
+    lightColor: Palette.sage500,
+    // Como num app de conversa: o texto aparece também na tela bloqueada.
     lockscreenVisibility: notifications.AndroidNotificationVisibility.PUBLIC,
     showBadge: true,
   });

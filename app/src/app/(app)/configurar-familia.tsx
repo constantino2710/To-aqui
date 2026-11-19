@@ -1,10 +1,10 @@
-import * as Location from 'expo-location';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Icone } from '@/components/icone';
 import { ActionPill } from '@/components/action-pill';
+import { CampoObservacao } from '@/components/campo-observacao';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { JanelaAnimada } from '@/components/familia/janela-animada';
@@ -12,7 +12,6 @@ import { IconButton } from '@/components/icon-button';
 import { IconField } from '@/components/icon-field';
 import { PressableScale } from '@/components/pressable-scale';
 import { QrFound, type QrExportavel } from '@/components/qr-found';
-import { LocationMap } from '@/components/location-map';
 import { PersonRow } from '@/components/person-row';
 import { PrimaryButton } from '@/components/primary-button';
 import { Screen } from '@/components/screen';
@@ -23,14 +22,14 @@ import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
 import { Palette, Radii, Spacing } from '@/constants/theme';
 import { EscalaToque, Motion } from '@/constants/motion';
+import { useAgora } from '@/hooks/use-agora';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { traduzErroBanco } from '@/lib/db-errors';
 import { finderUrl } from '@/lib/finder-url';
-import { openStreetMapUrl } from '@/lib/map-url';
+import { idadePosicao } from '@/lib/idade-posicao';
 import { salvarImagemQr } from '@/lib/save-qr-image';
 import { supabase } from '@/lib/supabase';
-import { tempoRelativo } from '@/lib/tempo-relativo';
 
 type AbaFamilia = 'membros' | 'qrcodes';
 type Pessoa = { profile_id: string; username: string; full_name: string; papel?: string };
@@ -39,6 +38,7 @@ type FamiliaResumo = { group_id: string; name: string; meu_papel: string };
 type QrCadastrado = {
   id: string;
   dependent_name: string;
+  finder_note: string | null;
   token: string;
   short_code: string;
   is_active: boolean;
@@ -53,6 +53,7 @@ type SessaoRastreamento = {
   responsible_lat: number | null;
   responsible_lng: number | null;
   responsible_recorded_at: string | null;
+  finder_location_paused_at: string | null;
 };
 type PingLocalizacao = {
   id: number;
@@ -64,7 +65,7 @@ type PingLocalizacao = {
   received_at: string;
 };
 
-type ParamsFamilia = { id?: string; aba?: AbaFamilia; nome?: string };
+type ParamsFamilia = { id?: string; aba?: AbaFamilia; nome?: string; v?: string };
 
 /**
  * A rota fica montada entre visitas (é uma aba oculta). Sem a `key`, ao abrir
@@ -86,7 +87,17 @@ function ConfiguracaoDaFamilia() {
   // Nome vindo da lista (quando houver): o título já aparece certo antes de carregar.
   const nomeInicial = (Array.isArray(params.nome) ? params.nome[0] : params.nome) ?? '';
   const { session } = useAuth();
-  const [aba, setAba] = useState<AbaFamilia>(params.aba === 'qrcodes' ? 'qrcodes' : 'membros');
+  const abaPedida: AbaFamilia = params.aba === 'qrcodes' ? 'qrcodes' : 'membros';
+  const [aba, setAba] = useState<AbaFamilia>(abaPedida);
+  // A tela fica montada entre visitas: voltar de um atendimento com
+  // `aba=qrcodes` precisa trocar a aba mesmo se ela estava em Membros. `v`
+  // muda a cada navegação, então o pedido vale mesmo repetindo a mesma aba.
+  const pedidoAba = `${params.aba ?? ''}:${params.v ?? ''}`;
+  const [pedidoAnterior, setPedidoAnterior] = useState(pedidoAba);
+  if (pedidoAba !== pedidoAnterior) {
+    setPedidoAnterior(pedidoAba);
+    if (params.aba) setAba(abaPedida);
+  }
   const [nome, setNome] = useState(nomeInicial);
   const [nomeSalvo, setNomeSalvo] = useState(nomeInicial);
   const [papel, setPapel] = useState('chefe');
@@ -96,6 +107,7 @@ function ConfiguracaoDaFamilia() {
   const [sessoes, setSessoes] = useState<SessaoRastreamento[]>([]);
   const [pings, setPings] = useState<PingLocalizacao[]>([]);
   const [nomeQr, setNomeQr] = useState('');
+  const [notaQr, setNotaQr] = useState('');
   const [editandoNome, setEditandoNome] = useState(false);
   const [mostrandoNovoQr, setMostrandoNovoQr] = useState(false);
   const [selecionados, setSelecionados] = useState<string[]>([]);
@@ -105,11 +117,11 @@ function ConfiguracaoDaFamilia() {
   const [cadastrandoQr, setCadastrandoQr] = useState(false);
   const [alterandoQr, setAlterandoQr] = useState<string | null>(null);
   const [excluindoQr, setExcluindoQr] = useState<string | null>(null);
-  const [compartilhandoLocalizacao, setCompartilhandoLocalizacao] = useState<string | null>(null);
-  const [encerrandoSessao, setEncerrandoSessao] = useState<string | null>(null);
+  const agora = useAgora();
   const [qrAberto, setQrAberto] = useState<QrCadastrado | null>(null);
   const [qrConfigurando, setQrConfigurando] = useState<QrCadastrado | null>(null);
   const [nomeQrEditando, setNomeQrEditando] = useState('');
+  const [notaQrEditando, setNotaQrEditando] = useState('');
   const [salvandoEdicaoQr, setSalvandoEdicaoQr] = useState(false);
   // Versão com moldura (nome + marca) para o download. Só é montada ao tocar em
   // baixar: montá-la junto com a janela pesava a animação de abertura.
@@ -129,12 +141,12 @@ function ConfiguracaoDaFamilia() {
         supabase.rpc('list_invitable_friends', { p_group_id: groupId }),
         supabase
           .from('qr_codes')
-          .select('id, dependent_name, token, short_code, is_active, created_at')
+          .select('id, dependent_name, finder_note, token, short_code, is_active, created_at')
           .eq('group_id', groupId)
           .order('created_at', { ascending: false }),
         supabase
           .from('tracking_sessions')
-          .select('id, qr_code_id, status, started_at, last_ping_at, responsible_lat, responsible_lng, responsible_recorded_at')
+          .select('id, qr_code_id, status, started_at, last_ping_at, responsible_lat, responsible_lng, responsible_recorded_at, finder_location_paused_at')
           .eq('group_id', groupId)
           .eq('status', 'active')
           .order('started_at', { ascending: false }),
@@ -150,13 +162,24 @@ function ConfiguracaoDaFamilia() {
       // Os QR Codes continuam sendo úteis mesmo se uma atualização nova do
       // rastreamento ainda não foi aplicada no banco. Preencher esses dados
       // antes de tratar o erro evita que a tela pareça vazia nesse intervalo.
-      setQrs((qrCodes.data ?? []) as QrCadastrado[]);
+      // Uma falha só nos QR Codes (ex.: logo após uma migration, enquanto a API
+      // ainda não conhece uma coluna nova) não apaga a lista que já estava na
+      // tela, nem impede membros e nome de carregarem.
+      if (qrCodes.error) {
+        notificar({
+          titulo: 'Não foi possível carregar os QR Codes',
+          mensagem: `${traduzErroBanco(qrCodes.error.message)} Puxe a tela para tentar de novo.`,
+          tom: 'erro',
+        });
+      } else {
+        setQrs((qrCodes.data ?? []) as QrCadastrado[]);
+      }
       if (!sessoesAtivas.error) setSessoes((sessoesAtivas.data ?? []) as SessaoRastreamento[]);
       if (!localizacoes.error) setPings((localizacoes.data ?? []) as PingLocalizacao[]);
 
       // O rastreamento é complementar à configuração da família. Uma falha
       // temporária nele não pode esconder o nome, membros ou QR Codes.
-      const error = grupos.error ?? pessoas.error ?? convidaveis.error ?? qrCodes.error;
+      const error = grupos.error ?? pessoas.error ?? convidaveis.error;
       if (error) {
         notificar({ titulo: 'Não foi possível carregar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
         return;
@@ -313,6 +336,7 @@ function ConfiguracaoDaFamilia() {
       group_id: groupId,
       created_by: session.user.id,
       dependent_name: nomeLimpo,
+      finder_note: notaQr.trim() || null,
     });
     setCadastrandoQr(false);
 
@@ -321,6 +345,7 @@ function ConfiguracaoDaFamilia() {
       return;
     }
     setNomeQr('');
+    setNotaQr('');
     setMostrandoNovoQr(false);
     await carregar();
     notificar({ titulo: 'QR Code cadastrado', mensagem: `${nomeLimpo} já aparece na família.`, tom: 'sucesso' });
@@ -347,6 +372,7 @@ function ConfiguracaoDaFamilia() {
   function abrirConfiguracaoQr(qr: QrCadastrado) {
     setQrAberto(null);
     setNomeQrEditando(qr.dependent_name);
+    setNotaQrEditando(qr.finder_note ?? '');
     setQrConfigurando(qr);
   }
 
@@ -360,14 +386,19 @@ function ConfiguracaoDaFamilia() {
     setSalvandoEdicaoQr(true);
     const { error } = await supabase
       .from('qr_codes')
-      .update({ dependent_name: nomeLimpo })
+      .update({ dependent_name: nomeLimpo, finder_note: notaQrEditando.trim() || null })
       .eq('id', qrConfigurando.id);
     setSalvandoEdicaoQr(false);
     if (error) {
       notificar({ titulo: 'Não foi possível editar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
       return;
     }
-    setQrs((atuais) => atuais.map((item) => item.id === qrConfigurando.id ? { ...item, dependent_name: nomeLimpo } : item));
+    const notaLimpa = notaQrEditando.trim() || null;
+    setQrs((atuais) =>
+      atuais.map((item) =>
+        item.id === qrConfigurando.id ? { ...item, dependent_name: nomeLimpo, finder_note: notaLimpa } : item,
+      ),
+    );
     setQrConfigurando(null);
   }
 
@@ -394,67 +425,6 @@ function ConfiguracaoDaFamilia() {
     setQrConfigurando((aberto) => aberto?.id === qr.id ? null : aberto);
     setQrs((atuais) => atuais.filter((item) => item.id !== qr.id));
     setSessoes((atuais) => atuais.filter((item) => item.qr_code_id !== qr.id));
-  }
-
-  async function resolverSessao(sessaoId: string) {
-    setEncerrandoSessao(sessaoId);
-    const { error } = await supabase.rpc('resolve_tracking_session', { p_session_id: sessaoId });
-    setEncerrandoSessao(null);
-    if (error) {
-      notificar({ titulo: 'Não foi possível encerrar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
-      return;
-    }
-    setSessoes((atuais) => atuais.filter((item) => item.id !== sessaoId));
-    notificar({ titulo: 'Atendimento encerrado', mensagem: 'O celular que compartilhou a localização receberá o aviso.', tom: 'sucesso' });
-  }
-
-  function confirmarDescarteSessao(sessaoId: string) {
-    Alert.alert(
-      'Descartar solicitação?',
-      'Essa solicitação vai sair da família e o rastreamento será encerrado.',
-      [
-        { text: 'Voltar', style: 'cancel' },
-        { text: 'Descartar', style: 'destructive', onPress: () => void descartarSessao(sessaoId) },
-      ],
-    );
-  }
-
-  async function descartarSessao(sessaoId: string) {
-    setEncerrandoSessao(sessaoId);
-    const { error } = await supabase.rpc('resolve_tracking_session', { p_session_id: sessaoId });
-    setEncerrandoSessao(null);
-    if (error) {
-      notificar({ titulo: 'Não foi possível descartar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
-      return;
-    }
-    setSessoes((atuais) => atuais.filter((item) => item.id !== sessaoId));
-    notificar({ titulo: 'Solicitação descartada', mensagem: 'Ela não aparecerá mais na lista de localizações.', tom: 'sucesso' });
-  }
-
-  async function compartilharLocalizacao(sessaoId: string) {
-    setCompartilhandoLocalizacao(sessaoId);
-    const permissao = await Location.requestForegroundPermissionsAsync();
-    if (!permissao.granted) {
-      setCompartilhandoLocalizacao(null);
-      notificar({ titulo: 'Localização não permitida', mensagem: 'Autorize a localização para que a pessoa que encontrou o QR possa ver onde você está.', tom: 'aviso' });
-      return;
-    }
-
-    const posicao = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    const { error } = await supabase.rpc('record_responsible_location', {
-      p_session_id: sessaoId,
-      p_lat: posicao.coords.latitude,
-      p_lng: posicao.coords.longitude,
-      p_accuracy_m: posicao.coords.accuracy,
-      p_recorded_at: new Date(posicao.timestamp).toISOString(),
-    });
-    setCompartilhandoLocalizacao(null);
-    if (error) {
-      notificar({ titulo: 'Não foi possível compartilhar', mensagem: traduzErroBanco(error.message), tom: 'erro' });
-      return;
-    }
-    await carregar();
-    notificar({ titulo: 'Localização compartilhada', mensagem: 'A pessoa que escaneou o QR agora vê sua posição no mapa desta sessão.', tom: 'sucesso' });
   }
 
   async function baixarImagemQr() {
@@ -604,63 +574,60 @@ function ConfiguracaoDaFamilia() {
 
       {!groupId && <PrimaryButton label="Criar família" onPress={salvar} loading={salvando} />}
 
+      {/* Alguém escaneou um QR: um card compacto por atendimento, antes de tudo.
+          O mapa, a conversa e o "Já encontramos" ficam na tela do atendimento. */}
       {groupId && aba === 'qrcodes' && sessoes.length > 0 && (
-        <View style={styles.lista}>
+        <View style={styles.encontrados}>
           {sessoes.map((sessao) => {
             const ping = pings.find((item) => item.session_id === sessao.id);
             const qr = qrs.find((item) => item.id === sessao.qr_code_id);
+            const idade = ping ? idadePosicao(ping.recorded_at, agora) : null;
+            // Pausada = quem encontrou escolheu parar (a conversa continua); não é atraso.
+            const pausada = Boolean(sessao.finder_location_paused_at);
+            const parada = !pausada && idade !== null && !idade.aoVivo;
+            const status = pausada
+              ? 'Localização pausada'
+              : !idade
+                ? 'Aguardando a localização'
+                : idade.aoVivo
+                  ? 'Localização ao vivo'
+                  : `Última posição ${idade.ha}`;
+            const nomeQr = qr?.dependent_name ?? 'QR Code';
             return (
-              <Card key={sessao.id}>
+              <Card
+                key={sessao.id}
+                onPress={() => router.push(`/encontrado?sessao=${sessao.id}` as Href)}
+                style={styles.cartaoEncontrado}>
                 <View style={styles.alertaCabecalho}>
-                  <View style={[styles.alertaIcone, { backgroundColor: theme.brandSoft }]}>
-                    <Icone nome="map-pin" tamanho={24} cor={theme.brand} />
+                  <View
+                    style={[
+                      styles.alertaIcone,
+                      { backgroundColor: pausada ? theme.backgroundSelected : parada ? theme.warningSoft : theme.brandSoft },
+                    ]}>
+                    <Icone
+                      nome={pausada ? 'pause' : parada ? 'clock' : !idade ? 'radio' : 'map-pin'}
+                      tamanho={24}
+                      cor={pausada ? theme.textSecondary : parada ? theme.warning : theme.brand}
+                    />
                   </View>
                   <View style={styles.textos}>
-                    <ThemedText style={styles.negrito}>Localização recebida</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      QR Code: {qr?.dependent_name ?? 'QR cadastrado'}
+                    <ThemedText style={styles.negrito} numberOfLines={1}>
+                      Encontrado: {nomeQr}
+                    </ThemedText>
+                    <ThemedText
+                      type="small"
+                      themeColor={parada ? undefined : 'textSecondary'}
+                      style={parada ? { color: theme.warning } : undefined}
+                      numberOfLines={1}>
+                      {status}
                     </ThemedText>
                   </View>
+                  <Icone nome="chevron-right" tamanho={22} cor={theme.textSecondary} />
                 </View>
-                {ping ? (
-                  <>
-                    {/* Um mapa só: onde está o QR (pin do Found) e, se você compartilhou,
-                        onde você está, ligados por uma linha tracejada. */}
-                    <LocationMap
-                      selo={`Atualizada ${tempoRelativo(ping.recorded_at)}`}
-                      pontos={[
-                        { lat: ping.lat, lng: ping.lng, tipo: 'encontrado', rotulo: qr?.dependent_name ?? 'QR Code' },
-                        ...(sessao.responsible_lat != null && sessao.responsible_lng != null
-                          ? [{ lat: sessao.responsible_lat, lng: sessao.responsible_lng, tipo: 'pessoa' as const, rotulo: 'Você' }]
-                          : []),
-                      ]}
-                    />
-                    <ThemedText type="small" themeColor="textSecondary">
-                      Atualizada em {new Date(ping.recorded_at).toLocaleString('pt-BR')}
-                      {ping.accuracy_m ? ` · precisão aproximada de ${Math.round(ping.accuracy_m)} m` : ''}
-                    </ThemedText>
-                    <View style={styles.lista}>
-                      <SecondaryButton compacto bloco label="Compartilhar minha localização" tom="marca" onPress={() => void compartilharLocalizacao(sessao.id)} loading={compartilhandoLocalizacao === sessao.id} />
-                      <SecondaryButton compacto bloco label="Abrir mapa" tom="marca" onPress={() => void Linking.openURL(openStreetMapUrl(ping.lat, ping.lng))} />
-                      <PrimaryButton label="Já encontramos" onPress={() => void resolverSessao(sessao.id)} />
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      Ainda não recebemos a primeira posição. Se o envio falhou, você pode descartar esta solicitação.
-                    </ThemedText>
-                    <SecondaryButton
-                      label="Descartar solicitação"
-                      tom="perigo"
-                      loading={encerrandoSessao === sessao.id}
-                      onPress={() => confirmarDescarteSessao(sessao.id)}
-                    />
-                  </>
-                )}
               </Card>
             );
           })}
+          <View style={[styles.divisoria, { backgroundColor: theme.border }]} />
         </View>
       )}
 
@@ -686,11 +653,13 @@ function ConfiguracaoDaFamilia() {
                 returnKeyType="done"
                 onSubmitEditing={cadastrarQr}
               />
+              <CampoObservacao value={notaQr} onChangeText={setNotaQr} />
               <PrimaryButton label="Cadastrar QR Code" onPress={cadastrarQr} loading={cadastrandoQr} />
               <SecondaryButton
                 label="Cancelar"
                 onPress={() => {
                   setNomeQr('');
+                  setNotaQr('');
                   setMostrandoNovoQr(false);
                 }}
               />
@@ -847,6 +816,7 @@ function ConfiguracaoDaFamilia() {
           returnKeyType="done"
           onSubmitEditing={() => void salvarEdicaoQr()}
         />
+        <CampoObservacao value={notaQrEditando} onChangeText={setNotaQrEditando} />
         <PrimaryButton label="Salvar alterações" onPress={() => void salvarEdicaoQr()} loading={salvandoEdicaoQr} />
         <View style={[styles.divisoria, { backgroundColor: theme.border }]} />
         {configExibido && (
@@ -956,6 +926,9 @@ const styles = StyleSheet.create({
   alertaIcone: { width: 48, height: 48, borderRadius: Radii.pill, alignItems: 'center', justifyContent: 'center' },
   modalCabecalho: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   divisoria: { height: 1 },
+  // Atendimentos em andamento + a divisória antes da lista de QR Codes.
+  encontrados: { gap: Spacing.two },
+  cartaoEncontrado: { padding: Spacing.three },
   imagemFundo: {
     width: '100%',
     borderRadius: Radii.large,
