@@ -1,6 +1,6 @@
-# Site público do QR Code
+# Found — site público do QR Code
 
-Site aberto no navegador quando alguém escaneia o QR Code do To Aqui. Não exige conta nem instalação: a pessoa decide se autoriza a localização, acompanha o compartilhamento e pode encerrá-lo quando quiser.
+Site aberto no navegador quando alguém escaneia o QR Code do Found. Não exige conta nem instalação: a pessoa decide se autoriza a localização, acompanha o compartilhamento e pode encerrá-lo quando quiser.
 
 O fluxo do produto e o checklist para a demonstração estão no [README principal](../README.md).
 

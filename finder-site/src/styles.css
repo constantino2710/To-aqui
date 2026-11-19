@@ -175,6 +175,15 @@
       0 10px 28px -8px hsl(var(--shadow));
   }
 
+  /* Campo dentro de cartão: degradê próprio, de outra matiz (igual ao IconField do app). */
+  .campo-chat {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--field-gradient-from)) 0%,
+      hsl(var(--field-gradient-to)) 100%
+    );
+  }
+
   /* As ondas do radar crescem a partir do próprio centro. */
   .animate-onda {
     transform-box: fill-box;
@@ -208,14 +217,17 @@
 }
 .mapa-found .leaflet-tile-pane { filter: var(--filtro-mapa); }
 
-/* Pin do Found com ondas de localização. */
+/* Pin do Found (sem o quadrado da logo) com ondas de localização na ponta. */
 .found-alvo { position: relative; width: 44px; height: 44px; }
 .found-alvo svg {
-  position: relative; z-index: 1; display: block; border-radius: 13px;
-  box-shadow: 0 0 0 3px hsl(var(--card)), 0 6px 14px rgb(0 0 0 / 0.28);
+  position: relative; z-index: 1; display: block;
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.28));
 }
+/* Contorno na cor do cartão: o pin verde não some sobre o mapa. */
+.found-alvo .found-pin { stroke: hsl(var(--card)); stroke-width: 3; paint-order: stroke; stroke-linejoin: round; }
 .found-onda {
-  position: absolute; inset: -14px; border-radius: 50%;
+  /* 72 px centrados na ponta do pin (y = 37). */
+  position: absolute; left: -14px; top: 1px; width: 72px; height: 72px; border-radius: 50%;
   border: 2px solid #3FA584; background: rgb(63 165 132 / 0.13);
   animation: found-onda 2.8s ease-out infinite;
 }
