@@ -52,7 +52,7 @@ export function useLocationAlerts() {
                 duracao: 7000,
                 acao: {
                   rotulo: 'Ver no mapa',
-                  onPress: () => router.push(`/configurar-familia?id=${familia.group_id}&aba=qrcodes` as Href),
+                  onPress: () => router.push(`/encontrado?sessao=${ping.session_id}` as Href),
                 },
               });
             })();

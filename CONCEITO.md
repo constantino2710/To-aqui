@@ -1,4 +1,4 @@
-# Pulseira Local — Conceito e Pesquisa de Mercado
+# Found — Conceito e Pesquisa de Mercado
 
 > Documento de referência do projeto. Consolida a pesquisa de concorrentes,
 > a definição do produto e as decisões técnicas.

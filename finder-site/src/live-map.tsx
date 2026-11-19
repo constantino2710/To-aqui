@@ -16,12 +16,13 @@ const URL_TILES = import.meta.env.VITE_MAP_TILES_URL ?? 'https://tile.openstreet
 const ATRIBUICAO =
   import.meta.env.VITE_MAP_TILES_ATTRIBUTION ?? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-// Você (quem achou o QR): o pin do Found com ondas de localização.
+// Você (quem achou o QR): só o pin do Found, sem o quadrado da logo, com ondas
+// de localização. A ponta do pin é o local exato: ancora nela (y 40 de 48).
 const iconeVoce = divIcon({
   className: '',
   iconSize: [44, 44],
-  iconAnchor: [22, 22],
-  html: `<div class="found-alvo"><span class="found-onda"></span><span class="found-onda d2"></span><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><defs><linearGradient id="found-pin-mapa" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FA584"/><stop offset="1" stop-color="#6CC160"/></linearGradient></defs><rect width="48" height="48" rx="14" fill="#1E2320"/><path d="${PIN}" fill="url(#found-pin-mapa)"/><rect x="18.5" y="14.5" width="11" height="11" rx="3" fill="#1E2320"/><rect x="21.5" y="17.5" width="5" height="5" rx="1.4" fill="#FFFFFF"/></svg></div>`,
+  iconAnchor: [22, 37],
+  html: `<div class="found-alvo"><span class="found-onda"></span><span class="found-onda d2"></span><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><defs><linearGradient id="found-pin-mapa" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FA584"/><stop offset="1" stop-color="#6CC160"/></linearGradient></defs><path class="found-pin" d="${PIN}" fill="url(#found-pin-mapa)"/><rect x="18.5" y="14.5" width="11" height="11" rx="3" fill="#1E2320"/><rect x="21.5" y="17.5" width="5" height="5" rx="1.4" fill="#FFFFFF"/></svg></div>`,
 });
 
 // A família (responsável): círculo no tom do botão principal, com ícone de pessoas.
@@ -54,7 +55,7 @@ export function LiveMap({ finder, responsible }: { finder?: Point; responsible?:
   );
 
   return (
-    <div className="mapa-found superficie-cartao relative h-72 w-full overflow-hidden rounded-[28px] bg-background" aria-label="Mapa das localizações compartilhadas">
+    <div className="mapa-found superficie-cartao relative isolate h-72 w-full overflow-hidden rounded-[28px] bg-background" aria-label="Mapa das localizações compartilhadas">
       {/* Selo "ao vivo": a posição é atualizada a cada poucos segundos. */}
       <span className="absolute left-3 top-3 z-[500] inline-flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-xs font-bold text-card-foreground shadow-[0_4px_14px_rgb(0_0_0/0.16)]">
         <span className="size-2 animate-pulse rounded-full bg-[#6CC160]" aria-hidden="true" />
@@ -66,7 +67,7 @@ export function LiveMap({ finder, responsible }: { finder?: Point; responsible?:
         {linha && <Polyline positions={linha} pathOptions={{ color: '#3FA584', weight: 3, opacity: 0.9, dashArray: '2 8', lineCap: 'round' }} />}
         {finder && (
           <Marker position={[finder.lat, finder.lng]} icon={iconeVoce} keyboard={false}>
-            <Tooltip permanent direction="top" offset={[0, -26]} className="found-tip">Você</Tooltip>
+            <Tooltip permanent direction="top" offset={[0, -32]} className="found-tip">Você</Tooltip>
           </Marker>
         )}
         {responsible && (

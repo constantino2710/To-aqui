@@ -1,4 +1,4 @@
-# Site público — To Aqui
+# Site público — Found
 
 Página aberta por quem escaneia o QR Code. React + Vite + Supabase.
 
@@ -8,7 +8,8 @@ O padrão visual completo está em [`../DESIGN.md`](../DESIGN.md), válido para 
 site e o app. **Siga-o sempre; só troque com pedido explícito do usuário.**
 Resumo para este site:
 
-- **Identidade Emerald (verde)**, tema claro e escuro acompanhando o sistema.
+- **Paleta Sálvia** (neutros esverdeados, ações em grafite, degradê verde-água → verde
+  para localização e confirmações), tema claro e escuro acompanhando o sistema.
 - **Componentes:** **shadcn/ui** (Radix + Tailwind CSS), em `src/components/ui/`.
   Para adicionar um componente, copie o padrão shadcn e estilize com as classes
   Tailwind e os tokens semânticos.

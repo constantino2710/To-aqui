@@ -1,6 +1,6 @@
 # Aplicativo Found
 
-Aplicativo Expo para responsáveis criarem famílias, cadastrarem QR Codes e acompanharem sessões de localização. O site público aberto pelo QR ainda exibe a marca To Aqui. A apresentação do projeto e o checklist de demonstração estão no [README principal](../README.md).
+Aplicativo Expo para responsáveis criarem famílias, cadastrarem QR Codes e acompanharem sessões de localização. A apresentação do projeto e o checklist de demonstração estão no [README principal](../README.md).
 
 ## Requisitos
 

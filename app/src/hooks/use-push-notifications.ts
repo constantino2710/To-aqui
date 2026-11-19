@@ -6,11 +6,15 @@ import { Platform } from 'react-native';
 import { useAuth } from '@/lib/auth';
 import { registrarPushDoAparelho } from '@/lib/push-notifications';
 
-type DadosNotificacao = { url?: unknown };
+type DadosNotificacao = { url?: unknown; tipo?: unknown };
 
 function abrirDestino(data: unknown) {
   const dados = data as DadosNotificacao | undefined;
-  if (typeof dados?.url === 'string') router.push(dados.url as Href);
+  if (typeof dados?.url !== 'string') return;
+  // Push de mensagem abre a conversa direto. O valor muda a cada toque, para
+  // abrir de novo mesmo se a tela daquela sessão já estiver montada.
+  const url = dados.tipo === 'chat' ? `${dados.url}&chat=${Date.now()}` : dados.url;
+  router.push(url as Href);
 }
 
 /** Registra o aparelho e abre a família certa quando o usuário toca no push. */

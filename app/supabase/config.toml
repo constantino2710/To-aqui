@@ -387,6 +387,10 @@ deno_version = 2
 [functions.notify-location-found]
 verify_jwt = false
 
+# Chamada pelo finder-site, que não tem login (ver notify-location-found).
+[functions.notify-chat-message]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
