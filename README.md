@@ -41,6 +41,13 @@ sequenceDiagram
 - Envio de posições GPS ao Supabase durante a sessão.
 - Visualização da localização e do horário da posição no app.
 - Atualização das posições e do estado da sessão.
+- Tela do site mantida acesa durante o compartilhamento (Wake Lock) e envio da última posição quando a página vai para segundo plano.
+- Aviso de posição desatualizada no app: depois de 30 s sem posição nova, o mapa deixa de dizer "ao vivo" e mostra há quanto tempo chegou o último ponto.
+- Observação opcional por QR Code ("Sobre quem você encontrou"), escrita pela família e mostrada no site antes de a pessoa decidir ajudar.
+- Limites de uso do lado público: no máximo 5 atendimentos novos por QR Code em 10 minutos e uma posição a cada 2 s por atendimento. Recarregar a página continua o mesmo atendimento.
+- Site em tempo real (Realtime Broadcast): mensagens, posição da família e encerramento chegam na hora, sem consultas repetidas.
+- Conversa entre quem encontrou e a família, sem identificar ninguém (o site mostra "Família"; o app, "Quem encontrou"), com respostas rápidas. As mensagens são apagadas após 90 dias.
+- Parar de compartilhar a localização dos dois lados sem encerrar a conversa: quem encontrou pausa e retoma o GPS no site; a família liga a própria posição ao vivo no app e pode parar, o que a tira do mapa de quem encontrou.
 - Encerramento pelo responsável (**Já encontramos**) ou por quem compartilha (**Parar de compartilhar**).
 - Persistência no banco: ao reabrir a tela da família, o app consulta as sessões ativas e as posições existentes.
 
@@ -83,7 +90,7 @@ Configure no `app/.env`:
 | `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key do projeto |
 | `EXPO_PUBLIC_PUBLIC_SITE_URL` | URL do site público que o QR deve abrir |
 
-### Site público To Aqui
+### Site público Found
 
 ```bash
 cd finder-site

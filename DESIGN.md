@@ -114,6 +114,10 @@ Base: [react-native-reusables](https://reactnativereusables.com) sobre
 | `Icone` | Único ponto de entrada de ícones (Feather + desenhados) |
 | `QrFound` | QR com a identidade: pontos arredondados, cantos grafite→verde, pin no centro; `moldura` gera o adesivo do download |
 | `LocationMap` | Mapa no padrão da marca (`lib/mapa-found.ts`): tiles neutros com tom sálvia, pin do Found com ondas, marcador "você", linha tracejada e selo |
+| `ChatSessao` | Conversa da sessão: balões em pílula (seus em grafite, de quem encontrou em verde suave), respostas rápidas em `ActionPill` e campo em pílula com degradê de campo |
+| `CampoObservacao` | Campo de várias linhas no visual do `IconField` (degradê de campo, rótulo dentro, borda verde no foco), com cantos 22 em vez de pílula e contador |
+| `BannerMensagem` | Mensagem nova de quem encontrou, no topo de qualquer tela: quem mandou + texto, toque abre o chat |
+| `AvisoPosicaoAntiga` | Faixa de aviso (`warningSoft` + ícone `clock`) quando a última posição passou de 30 s |
 | `AlturaAnimada` | Anima a altura só na troca de conteúdo (`chave`) |
 | `Entrada` | Fade + 10 px de deslize ao montar (o `Screen` já aplica) |
 | `Section` | Título 18/700 + itens com 8 de espaço |
